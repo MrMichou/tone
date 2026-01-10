@@ -1,0 +1,87 @@
+{
+  "color_maps": {},
+  "resources": {
+    "one-clusters": {
+      "display_name": "Clusters",
+      "service": "cluster",
+      "sdk_method": "list",
+      "sdk_method_params": {},
+      "response_path": "CLUSTER_POOL.CLUSTER",
+      "id_field": "ID",
+      "name_field": "NAME",
+      "is_global": true,
+      "columns": [
+        { "header": "ID", "json_path": "ID", "width": 8 },
+        { "header": "NAME", "json_path": "NAME", "width": 30 },
+        { "header": "HOSTS", "json_path": "HOSTS.ID", "width": 10 },
+        { "header": "VNETS", "json_path": "VNETS.ID", "width": 10 },
+        { "header": "DATASTORES", "json_path": "DATASTORES.ID", "width": 12 }
+      ],
+      "sub_resources": [
+        {
+          "resource_key": "one-hosts",
+          "display_name": "Hosts",
+          "shortcut": "h",
+          "parent_id_field": "ID",
+          "filter_param": "cluster_id"
+        }
+      ],
+      "actions": [],
+      "detail_sdk_method": "get"
+    },
+    "one-users": {
+      "display_name": "Users",
+      "service": "user",
+      "sdk_method": "list",
+      "sdk_method_params": {},
+      "response_path": "USER_POOL.USER",
+      "id_field": "ID",
+      "name_field": "NAME",
+      "is_global": true,
+      "columns": [
+        { "header": "ID", "json_path": "ID", "width": 8 },
+        { "header": "NAME", "json_path": "NAME", "width": 25 },
+        { "header": "GROUP", "json_path": "GNAME", "width": 15 },
+        { "header": "AUTH", "json_path": "AUTH_DRIVER", "width": 15 },
+        { "header": "ENABLED", "json_path": "ENABLED", "width": 10, "color_map": "boolean" }
+      ],
+      "sub_resources": [],
+      "actions": [],
+      "detail_sdk_method": "get"
+    },
+    "one-groups": {
+      "display_name": "Groups",
+      "service": "group",
+      "sdk_method": "list",
+      "sdk_method_params": {},
+      "response_path": "GROUP_POOL.GROUP",
+      "id_field": "ID",
+      "name_field": "NAME",
+      "is_global": true,
+      "columns": [
+        { "header": "ID", "json_path": "ID", "width": 10 },
+        { "header": "NAME", "json_path": "NAME", "width": 30 },
+        { "header": "USERS", "json_path": "USERS.ID", "width": 15 }
+      ],
+      "sub_resources": [],
+      "actions": []
+    },
+    "one-zones": {
+      "display_name": "Zones",
+      "service": "zone",
+      "sdk_method": "list",
+      "sdk_method_params": {},
+      "response_path": "ZONE_POOL.ZONE",
+      "id_field": "ID",
+      "name_field": "NAME",
+      "is_global": true,
+      "columns": [
+        { "header": "ID", "json_path": "ID", "width": 10 },
+        { "header": "NAME", "json_path": "NAME", "width": 30 },
+        { "header": "ENDPOINT", "json_path": "TEMPLATE.ENDPOINT", "width": 40 }
+      ],
+      "sub_resources": [],
+      "actions": []
+    }
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "color_maps": {
+    "vm_state": [
+      { "value": "INIT", "color": [128, 128, 128] },
+      { "value": "PENDING", "color": [255, 255, 0] },
+      { "value": "HOLD", "color": [255, 165, 0] },
+      { "value": "ACTIVE", "color": [0, 255, 0] },
+      { "value": "STOPPED", "color": [255, 0, 0] },
+      { "value": "SUSPENDED", "color": [255, 165, 0] },
+      { "value": "DONE", "color": [128, 128, 128] },
+      { "value": "POWEROFF", "color": [255, 0, 0] },
+      { "value": "UNDEPLOYED", "color": [128, 128, 128] },
+      { "value": "CLONING", "color": [0, 255, 255] },
+      { "value": "CLONING_FAILURE", "color": [255, 0, 0] }
+    ],
+    "lcm_state": [
+      { "value": "RUNNING", "color": [0, 255, 0] },
+      { "value": "PROLOG", "color": [255, 255, 0] },
+      { "value": "BOOT", "color": [255, 255, 0] },
+      { "value": "MIGRATE", "color": [0, 255, 255] },
+      { "value": "SHUTDOWN", "color": [255, 165, 0] },
+      { "value": "UNKNOWN", "color": [255, 0, 0] },
+      { "value": "FAILURE", "color": [255, 0, 0] }
+    ],
+    "host_state": [
+      { "value": "INIT", "color": [128, 128, 128] },
+      { "value": "MONITORING_MONITORED", "color": [255, 255, 0] },
+      { "value": "MONITORED", "color": [0, 255, 0] },
+      { "value": "ERROR", "color": [255, 0, 0] },
+      { "value": "DISABLED", "color": [128, 128, 128] },
+      { "value": "MONITORING_ERROR", "color": [255, 165, 0] },
+      { "value": "MONITORING_INIT", "color": [255, 255, 0] },
+      { "value": "MONITORING_DISABLED", "color": [128, 128, 128] },
+      { "value": "OFFLINE", "color": [255, 0, 0] }
+    ],
+    "datastore_state": [
+      { "value": "READY", "color": [0, 255, 0] },
+      { "value": "DISABLED", "color": [128, 128, 128] }
+    ],
+    "image_state": [
+      { "value": "INIT", "color": [128, 128, 128] },
+      { "value": "READY", "color": [0, 255, 0] },
+      { "value": "USED", "color": [0, 255, 255] },
+      { "value": "DISABLED", "color": [128, 128, 128] },
+      { "value": "LOCKED", "color": [255, 165, 0] },
+      { "value": "ERROR", "color": [255, 0, 0] },
+      { "value": "CLONE", "color": [255, 255, 0] },
+      { "value": "DELETE", "color": [255, 0, 0] },
+      { "value": "USED_PERS", "color": [0, 255, 255] },
+      { "value": "LOCKED_USED", "color": [255, 165, 0] },
+      { "value": "LOCKED_USED_PERS", "color": [255, 165, 0] }
+    ],
+    "boolean": [
+      { "value": "true", "color": [0, 255, 0] },
+      { "value": "false", "color": [255, 0, 0] },
+      { "value": "YES", "color": [0, 255, 0] },
+      { "value": "NO", "color": [255, 0, 0] },
+      { "value": "1", "color": [0, 255, 0] },
+      { "value": "0", "color": [255, 0, 0] }
+    ]
+  },
+  "resources": {}
+}

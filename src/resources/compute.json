@@ -1,0 +1,170 @@
+{
+  "color_maps": {},
+  "resources": {
+    "one-vms": {
+      "display_name": "Virtual Machines",
+      "service": "vm",
+      "sdk_method": "list",
+      "sdk_method_params": {
+        "filter": -2,
+        "start": -1,
+        "end": -1,
+        "state": -1
+      },
+      "response_path": "VM_POOL.VM",
+      "id_field": "ID",
+      "name_field": "NAME",
+      "is_global": true,
+      "columns": [
+        { "header": "ID", "json_path": "ID", "width": 8 },
+        { "header": "NAME", "json_path": "NAME", "width": 25 },
+        { "header": "USER", "json_path": "UNAME", "width": 12 },
+        { "header": "GROUP", "json_path": "GNAME", "width": 12 },
+        { "header": "STATE", "json_path": "STATE", "width": 12, "color_map": "vm_state", "format": "vm_state" },
+        { "header": "LCM", "json_path": "LCM_STATE", "width": 12, "color_map": "lcm_state", "format": "lcm_state" },
+        { "header": "HOST", "json_path": "HISTORY_RECORDS.HISTORY.HOSTNAME", "width": 15 },
+        { "header": "CPU", "json_path": "TEMPLATE.CPU", "width": 6 },
+        { "header": "MEM", "json_path": "TEMPLATE.MEMORY", "width": 8 }
+      ],
+      "sub_resources": [],
+      "actions": [
+        {
+          "key": "resume",
+          "display_name": "Resume",
+          "shortcut": "r",
+          "sdk_method": "resume",
+          "confirm": {
+            "message": "Resume VM",
+            "default_yes": true,
+            "destructive": false
+          }
+        },
+        {
+          "key": "suspend",
+          "display_name": "Suspend",
+          "shortcut": "u",
+          "sdk_method": "suspend",
+          "confirm": {
+            "message": "Suspend VM",
+            "default_yes": false,
+            "destructive": false
+          }
+        },
+        {
+          "key": "stop",
+          "display_name": "Stop",
+          "shortcut": "s",
+          "sdk_method": "stop",
+          "confirm": {
+            "message": "Stop VM",
+            "default_yes": false,
+            "destructive": false
+          }
+        },
+        {
+          "key": "poweroff",
+          "display_name": "Power Off",
+          "shortcut": "S",
+          "sdk_method": "poweroff",
+          "confirm": {
+            "message": "Power off VM",
+            "default_yes": false,
+            "destructive": false
+          }
+        },
+        {
+          "key": "reboot",
+          "display_name": "Reboot",
+          "shortcut": "R",
+          "sdk_method": "reboot",
+          "confirm": {
+            "message": "Reboot VM",
+            "default_yes": false,
+            "destructive": false
+          }
+        },
+        {
+          "key": "terminate",
+          "display_name": "Terminate",
+          "shortcut": "ctrl+d",
+          "sdk_method": "terminate",
+          "confirm": {
+            "message": "Terminate VM (this will delete the VM)",
+            "default_yes": false,
+            "destructive": true
+          }
+        },
+        {
+          "key": "hold",
+          "display_name": "Hold",
+          "shortcut": "h",
+          "sdk_method": "hold",
+          "confirm": {
+            "message": "Hold VM",
+            "default_yes": true,
+            "destructive": false
+          }
+        },
+        {
+          "key": "release",
+          "display_name": "Release",
+          "shortcut": "l",
+          "sdk_method": "release",
+          "confirm": {
+            "message": "Release VM",
+            "default_yes": true,
+            "destructive": false
+          }
+        }
+      ],
+      "detail_sdk_method": "get"
+    },
+    "one-hosts": {
+      "display_name": "Hosts",
+      "service": "host",
+      "sdk_method": "list",
+      "sdk_method_params": {},
+      "response_path": "HOST_POOL.HOST",
+      "id_field": "ID",
+      "name_field": "NAME",
+      "is_global": true,
+      "columns": [
+        { "header": "ID", "json_path": "ID", "width": 6 },
+        { "header": "NAME", "json_path": "NAME", "width": 25 },
+        { "header": "CLUSTER", "json_path": "CLUSTER", "width": 15 },
+        { "header": "STATE", "json_path": "STATE", "width": 15, "color_map": "host_state", "format": "host_state" },
+        { "header": "VMS", "json_path": "HOST_SHARE.RUNNING_VMS", "width": 6 },
+        { "header": "CPU", "json_path": "HOST_SHARE.CPU_USAGE", "width": 10 },
+        { "header": "MEM", "json_path": "HOST_SHARE.MEM_USAGE", "width": 12 }
+      ],
+      "sub_resources": [],
+      "actions": [],
+      "detail_sdk_method": "get"
+    },
+    "one-templates": {
+      "display_name": "VM Templates",
+      "service": "template",
+      "sdk_method": "list",
+      "sdk_method_params": {
+        "filter": -2,
+        "start": -1,
+        "end": -1
+      },
+      "response_path": "VMTEMPLATE_POOL.VMTEMPLATE",
+      "id_field": "ID",
+      "name_field": "NAME",
+      "is_global": true,
+      "columns": [
+        { "header": "ID", "json_path": "ID", "width": 8 },
+        { "header": "NAME", "json_path": "NAME", "width": 30 },
+        { "header": "USER", "json_path": "UNAME", "width": 15 },
+        { "header": "GROUP", "json_path": "GNAME", "width": 15 },
+        { "header": "CPU", "json_path": "TEMPLATE.CPU", "width": 8 },
+        { "header": "MEM", "json_path": "TEMPLATE.MEMORY", "width": 10 }
+      ],
+      "sub_resources": [],
+      "actions": [],
+      "detail_sdk_method": "get"
+    }
+  }
+}

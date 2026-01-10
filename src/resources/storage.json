@@ -1,0 +1,64 @@
+{
+  "color_maps": {},
+  "resources": {
+    "one-datastores": {
+      "display_name": "Datastores",
+      "service": "datastore",
+      "sdk_method": "list",
+      "sdk_method_params": {},
+      "response_path": "DATASTORE_POOL.DATASTORE",
+      "id_field": "ID",
+      "name_field": "NAME",
+      "is_global": true,
+      "columns": [
+        { "header": "ID", "json_path": "ID", "width": 6 },
+        { "header": "NAME", "json_path": "NAME", "width": 25 },
+        { "header": "CLUSTER", "json_path": "CLUSTER", "width": 15 },
+        { "header": "TYPE", "json_path": "TYPE", "width": 10 },
+        { "header": "STATE", "json_path": "STATE", "width": 10, "color_map": "datastore_state", "format": "datastore_state" },
+        { "header": "TOTAL", "json_path": "TOTAL_MB", "width": 12 },
+        { "header": "FREE", "json_path": "FREE_MB", "width": 12 },
+        { "header": "IMAGES", "json_path": "IMAGES.ID", "width": 8 }
+      ],
+      "sub_resources": [
+        {
+          "resource_key": "one-images",
+          "display_name": "Images",
+          "shortcut": "i",
+          "parent_id_field": "ID",
+          "filter_param": "datastore_id"
+        }
+      ],
+      "actions": [],
+      "detail_sdk_method": "get"
+    },
+    "one-images": {
+      "display_name": "Images",
+      "service": "image",
+      "sdk_method": "list",
+      "sdk_method_params": {
+        "filter": -2,
+        "start": -1,
+        "end": -1
+      },
+      "response_path": "IMAGE_POOL.IMAGE",
+      "id_field": "ID",
+      "name_field": "NAME",
+      "is_global": true,
+      "columns": [
+        { "header": "ID", "json_path": "ID", "width": 6 },
+        { "header": "NAME", "json_path": "NAME", "width": 30 },
+        { "header": "USER", "json_path": "UNAME", "width": 12 },
+        { "header": "GROUP", "json_path": "GNAME", "width": 12 },
+        { "header": "DATASTORE", "json_path": "DATASTORE", "width": 15 },
+        { "header": "TYPE", "json_path": "TYPE", "width": 8 },
+        { "header": "STATE", "json_path": "STATE", "width": 10, "color_map": "image_state", "format": "image_state" },
+        { "header": "SIZE", "json_path": "SIZE", "width": 10 },
+        { "header": "VMS", "json_path": "RUNNING_VMS", "width": 6 }
+      ],
+      "sub_resources": [],
+      "actions": [],
+      "detail_sdk_method": "get"
+    }
+  }
+}
