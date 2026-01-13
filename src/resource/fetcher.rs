@@ -46,7 +46,8 @@ pub async fn fetch_resources_paginated(
     }
 
     // Call the SDK method
-    let response = invoke_sdk_method(&resource.service, &resource.sdk_method, client, &params).await?;
+    let response =
+        invoke_sdk_method(&resource.service, &resource.sdk_method, client, &params).await?;
 
     // Extract items from response using response_path
     let items = extract_items(&response, &resource.response_path)?;
@@ -78,29 +79,4 @@ fn extract_items(response: &Value, path: &str) -> Result<Vec<Value>> {
         Value::Null => Ok(Vec::new()),
         _ => Ok(Vec::new()),
     }
-}
-
-/// Fetch detail for a single resource
-pub async fn fetch_resource_detail(
-    resource_key: &str,
-    client: &OneClient,
-    resource_id: i32,
-) -> Result<Value> {
-    let resource = get_resource(resource_key)
-        .ok_or_else(|| anyhow::anyhow!("Unknown resource: {}", resource_key))?;
-
-    let method = resource
-        .detail_sdk_method
-        .as_ref()
-        .unwrap_or(&resource.sdk_method);
-
-    let mut params = resource.detail_sdk_method_params.clone();
-    if params.is_null() {
-        params = serde_json::json!({});
-    }
-    if let Value::Object(ref mut map) = params {
-        map.insert("id".to_string(), Value::Number(resource_id.into()));
-    }
-
-    invoke_sdk_method(&resource.service, method, client, &params).await
 }

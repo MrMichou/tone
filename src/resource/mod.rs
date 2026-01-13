@@ -6,10 +6,10 @@ mod fetcher;
 mod registry;
 mod sdk_dispatch;
 
-pub use fetcher::{fetch_resources, fetch_resources_paginated, PaginatedResult};
+pub use fetcher::{fetch_resources, fetch_resources_paginated};
 pub use registry::{
-    get_all_resource_keys, get_color_for_value, get_color_map, get_resource, ActionDef,
-    ColumnDef, ConfirmConfig, ResourceDef, ResourceFilter, SubResourceDef,
+    get_all_resource_keys, get_color_for_value, get_resource, ActionDef, ColumnDef, ResourceDef,
+    ResourceFilter,
 };
 pub use sdk_dispatch::invoke_sdk_method;
 
@@ -57,26 +57,6 @@ pub fn extract_json_value(item: &serde_json::Value, path: &str) -> String {
             }
         }
         serde_json::Value::Object(_) => "[object]".to_string(),
-    }
-}
-
-/// Format bytes to human readable string
-pub fn format_bytes(bytes: u64) -> String {
-    const KB: u64 = 1024;
-    const MB: u64 = KB * 1024;
-    const GB: u64 = MB * 1024;
-    const TB: u64 = GB * 1024;
-
-    if bytes >= TB {
-        format!("{:.1} TB", bytes as f64 / TB as f64)
-    } else if bytes >= GB {
-        format!("{:.1} GB", bytes as f64 / GB as f64)
-    } else if bytes >= MB {
-        format!("{:.1} MB", bytes as f64 / MB as f64)
-    } else if bytes >= KB {
-        format!("{:.1} KB", bytes as f64 / KB as f64)
-    } else {
-        format!("{} B", bytes)
     }
 }
 

@@ -34,11 +34,7 @@ async fn handle_key(app: &mut App, code: KeyCode, modifiers: KeyModifiers) -> Re
     }
 }
 
-async fn handle_normal_mode(
-    app: &mut App,
-    code: KeyCode,
-    modifiers: KeyModifiers,
-) -> Result<bool> {
+async fn handle_normal_mode(app: &mut App, code: KeyCode, modifiers: KeyModifiers) -> Result<bool> {
     // Handle gg (go to top) with timing
     if code == KeyCode::Char('g') {
         let now = std::time::Instant::now();
@@ -243,7 +239,12 @@ async fn handle_confirm_mode(
             app.exit_mode();
         }
         KeyCode::Enter => {
-            if app.pending_action.as_ref().map(|p| p.selected_yes).unwrap_or(false) {
+            if app
+                .pending_action
+                .as_ref()
+                .map(|p| p.selected_yes)
+                .unwrap_or(false)
+            {
                 execute_pending_action(app).await?;
             }
             app.exit_mode();

@@ -76,10 +76,6 @@ pub struct ActionDef {
 }
 
 impl ActionDef {
-    pub fn requires_confirm(&self) -> bool {
-        self.confirm.is_some() || self.needs_confirm
-    }
-
     pub fn get_confirm_config(&self) -> Option<ConfirmConfig> {
         if let Some(ref config) = self.confirm {
             Some(config.clone())

@@ -4,7 +4,6 @@
 //! OpenNebula cloud resources.
 
 mod app;
-mod config;
 mod event;
 mod one;
 mod resource;
@@ -20,7 +19,6 @@ pub const VERSION: &str = match option_env!("TONE_VERSION") {
 use anyhow::Result;
 use app::App;
 use clap::{Parser, ValueEnum};
-use config::Config;
 use crossterm::{
     event::{poll, read, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
     execute,
@@ -184,17 +182,7 @@ where
         return Ok(None);
     }
 
-    // Step 1: Load configuration
-    let config = Config::load();
-    splash.set_message("Loading configuration...");
-    terminal.draw(|f| render_splash(f, &splash))?;
-    splash.complete_step();
-
-    if check_abort()? {
-        return Ok(None);
-    }
-
-    // Step 2: Initialize OpenNebula client
+    // Step 1: Initialize OpenNebula client
     splash.set_message("Connecting to OpenNebula...");
     terminal.draw(|f| render_splash(f, &splash))?;
 
@@ -236,7 +224,7 @@ where
 
     tokio::time::sleep(Duration::from_millis(200)).await;
 
-    let mut app = App::from_initialized(client, vms, config, args.readonly);
+    let mut app = App::from_initialized(client, vms, args.readonly);
 
     if let Some(err) = initial_error {
         app.error_message = Some(err);

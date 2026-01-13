@@ -66,8 +66,7 @@ impl OneCredentials {
 
     /// Get the XML-RPC endpoint URL
     fn get_endpoint() -> String {
-        std::env::var("ONE_XMLRPC")
-            .unwrap_or_else(|_| "http://localhost:2633/RPC2".to_string())
+        std::env::var("ONE_XMLRPC").unwrap_or_else(|_| "http://localhost:2633/RPC2".to_string())
     }
 
     /// Parse auth string into username and password
@@ -85,32 +84,6 @@ impl OneCredentials {
     pub fn auth_string(&self) -> String {
         format!("{}:{}", self.username, self.password)
     }
-}
-
-/// Get default endpoint from environment
-pub fn get_default_endpoint() -> Option<String> {
-    std::env::var("ONE_XMLRPC").ok()
-}
-
-/// Get default username from environment or config
-pub fn get_default_username() -> Option<String> {
-    if let Ok(auth) = std::env::var("ONE_AUTH") {
-        let path = PathBuf::from(&auth);
-        let auth_str = if path.exists() {
-            std::fs::read_to_string(&path).ok()?
-        } else {
-            auth
-        };
-        return auth_str.split(':').next().map(|s| s.trim().to_string());
-    }
-
-    let auth_file = dirs::home_dir()?.join(".one").join("one_auth");
-    if auth_file.exists() {
-        let content = std::fs::read_to_string(&auth_file).ok()?;
-        return content.split(':').next().map(|s| s.trim().to_string());
-    }
-
-    None
 }
 
 #[cfg(test)]
