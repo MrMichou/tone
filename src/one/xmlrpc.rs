@@ -15,7 +15,9 @@ pub fn build_method_call(method: &str, params: &[XmlRpcValue]) -> Result<String>
 
     // XML declaration
     writer
-        .write_event(Event::Decl(quick_xml::events::BytesDecl::new("1.0", None, None)))
+        .write_event(Event::Decl(quick_xml::events::BytesDecl::new(
+            "1.0", None, None,
+        )))
         .context("Failed to write XML declaration")?;
 
     // methodCall
@@ -211,21 +213,19 @@ pub fn parse_response(xml: &str) -> Result<XmlRpcResponse> {
 
     loop {
         match reader.read_event_into(&mut buf) {
-            Ok(Event::Start(ref e)) => {
-                match e.name().as_ref() {
-                    b"fault" => in_fault = true,
-                    b"params" => in_params = true,
-                    b"value" if in_fault || in_params => {
-                        let value = parse_value_content(&mut reader)?;
-                        if in_fault {
-                            return Ok(XmlRpcResponse::Fault(value));
-                        } else {
-                            return Ok(XmlRpcResponse::Success(value));
-                        }
+            Ok(Event::Start(ref e)) => match e.name().as_ref() {
+                b"fault" => in_fault = true,
+                b"params" => in_params = true,
+                b"value" if in_fault || in_params => {
+                    let value = parse_value_content(&mut reader)?;
+                    if in_fault {
+                        return Ok(XmlRpcResponse::Fault(value));
+                    } else {
+                        return Ok(XmlRpcResponse::Success(value));
                     }
-                    _ => {}
                 }
-            }
+                _ => {}
+            },
             Ok(Event::Eof) => break,
             Err(e) => return Err(anyhow::anyhow!("XML parsing error: {}", e)),
             _ => {}
@@ -267,8 +267,8 @@ fn parse_value_content(reader: &mut quick_xml::Reader<&[u8]>) -> Result<XmlRpcVa
                         }
                     }
                     "name" => in_name = true,
-                    "string" | "int" | "i4" | "boolean" | "double" | "array" | "struct" | "data"
-                    | "member" => {
+                    "string" | "int" | "i4" | "boolean" | "double" | "array" | "struct"
+                    | "data" | "member" => {
                         if current_type.is_none() {
                             current_type = Some(tag);
                         }
@@ -290,7 +290,8 @@ fn parse_value_content(reader: &mut quick_xml::Reader<&[u8]>) -> Result<XmlRpcVa
                                     Ok(XmlRpcValue::Int(i))
                                 }
                                 Some("boolean") => {
-                                    let b = text_content == "1" || text_content.to_lowercase() == "true";
+                                    let b = text_content == "1"
+                                        || text_content.to_lowercase() == "true";
                                     Ok(XmlRpcValue::Boolean(b))
                                 }
                                 Some("double") => {
@@ -332,38 +333,16 @@ pub enum XmlRpcResponse {
     Fault(XmlRpcValue),
 }
 
-impl XmlRpcResponse {
-    /// Check if the response indicates success
-    pub fn is_success(&self) -> bool {
-        matches!(self, XmlRpcResponse::Success(_))
-    }
-
-    /// Get the value if successful
-    pub fn into_value(self) -> Result<XmlRpcValue> {
-        match self {
-            XmlRpcResponse::Success(v) => Ok(v),
-            XmlRpcResponse::Fault(v) => {
-                let msg = format!("XML-RPC fault: {:?}", v);
-                Err(anyhow::anyhow!(msg))
-            }
-        }
-    }
-}
-
 /// Convert XmlRpcValue to serde_json::Value
 pub fn xmlrpc_to_json(value: &XmlRpcValue) -> Value {
     match value {
         XmlRpcValue::String(s) => Value::String(s.clone()),
         XmlRpcValue::Int(i) => Value::Number((*i).into()),
         XmlRpcValue::Boolean(b) => Value::Bool(*b),
-        XmlRpcValue::Double(d) => {
-            serde_json::Number::from_f64(*d)
-                .map(Value::Number)
-                .unwrap_or(Value::Null)
-        }
-        XmlRpcValue::Array(arr) => {
-            Value::Array(arr.iter().map(xmlrpc_to_json).collect())
-        }
+        XmlRpcValue::Double(d) => serde_json::Number::from_f64(*d)
+            .map(Value::Number)
+            .unwrap_or(Value::Null),
+        XmlRpcValue::Array(arr) => Value::Array(arr.iter().map(xmlrpc_to_json).collect()),
         XmlRpcValue::Struct(members) => {
             let map: Map<String, Value> = members
                 .iter()
@@ -388,14 +367,12 @@ pub fn parse_one_xml_to_json(xml: &str) -> Result<Value> {
 fn parse_xml_element(reader: &mut quick_xml::Reader<&[u8]>) -> Result<Value> {
     let mut buf = Vec::new();
     let mut result: Map<String, Value> = Map::new();
-    let mut current_tag: Option<String> = None;
     let mut text_content = String::new();
 
     loop {
         match reader.read_event_into(&mut buf) {
             Ok(Event::Start(ref e)) => {
                 let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
-                current_tag = Some(tag.clone());
 
                 // Parse nested element recursively
                 let nested = parse_xml_element(reader)?;
@@ -412,7 +389,6 @@ fn parse_xml_element(reader: &mut quick_xml::Reader<&[u8]>) -> Result<Value> {
                 } else {
                     result.insert(tag, nested);
                 }
-                current_tag = None;
             }
             Ok(Event::End(_)) => {
                 if result.is_empty() && !text_content.is_empty() {

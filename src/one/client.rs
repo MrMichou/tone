@@ -3,7 +3,9 @@
 //! Main client for interacting with OpenNebula's XML-RPC API.
 
 use super::auth::OneCredentials;
-use super::xmlrpc::{build_method_call, parse_one_xml_to_json, parse_response, XmlRpcResponse, XmlRpcValue};
+use super::xmlrpc::{
+    build_method_call, parse_one_xml_to_json, parse_response, XmlRpcResponse, XmlRpcValue,
+};
 use anyhow::{Context, Result};
 use reqwest::Client;
 use serde_json::Value;
@@ -69,7 +71,11 @@ impl OneClient {
 
         if !status.is_success() {
             tracing::error!("HTTP error: {} - {}", status, body);
-            return Err(anyhow::anyhow!("HTTP request failed: {} - {}", status, body));
+            return Err(anyhow::anyhow!(
+                "HTTP request failed: {} - {}",
+                status,
+                body
+            ));
         }
 
         tracing::trace!("Response XML: {}", body);
@@ -144,14 +150,18 @@ impl OneClient {
 
     /// Get VM info (one.vm.info)
     pub async fn get_vm(&self, vm_id: i32) -> Result<Value> {
-        self.call("one.vm.info", vec![XmlRpcValue::Int(vm_id)]).await
+        self.call("one.vm.info", vec![XmlRpcValue::Int(vm_id)])
+            .await
     }
 
     /// Perform VM action (one.vm.action)
     pub async fn vm_action(&self, action: &str, vm_id: i32) -> Result<Value> {
         self.call(
             "one.vm.action",
-            vec![XmlRpcValue::String(action.to_string()), XmlRpcValue::Int(vm_id)],
+            vec![
+                XmlRpcValue::String(action.to_string()),
+                XmlRpcValue::Int(vm_id),
+            ],
         )
         .await
     }

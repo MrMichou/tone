@@ -25,9 +25,12 @@ pub fn render(f: &mut Frame, _app: &App) {
         .title_alignment(Alignment::Center);
 
     let help_text = vec![
-        Line::from(vec![
-            Span::styled("Navigation", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-        ]),
+        Line::from(vec![Span::styled(
+            "Navigation",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(vec![
             Span::styled("  j/k, Up/Down  ", Style::default().fg(Color::Cyan)),
             Span::raw("Navigate up/down"),
@@ -49,9 +52,12 @@ pub fn render(f: &mut Frame, _app: &App) {
             Span::raw("Go back"),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Commands", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-        ]),
+        Line::from(vec![Span::styled(
+            "Commands",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(vec![
             Span::styled("  :             ", Style::default().fg(Color::Cyan)),
             Span::raw("Open command mode"),
@@ -77,9 +83,12 @@ pub fn render(f: &mut Frame, _app: &App) {
             Span::raw("Quit"),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("VM Actions", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-        ]),
+        Line::from(vec![Span::styled(
+            "VM Actions",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(vec![
             Span::styled("  r             ", Style::default().fg(Color::Cyan)),
             Span::raw("Resume VM"),
@@ -105,9 +114,12 @@ pub fn render(f: &mut Frame, _app: &App) {
             Span::raw("Terminate VM (destructive)"),
         ]),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Resources", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-        ]),
+        Line::from(vec![Span::styled(
+            "Resources",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )]),
         Line::from(vec![
             Span::styled("  :one-vms      ", Style::default().fg(Color::Cyan)),
             Span::raw("Virtual Machines"),

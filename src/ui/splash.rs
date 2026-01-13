@@ -27,7 +27,7 @@ impl SplashState {
     pub fn new() -> Self {
         Self {
             current_step: 0,
-            total_steps: 4,
+            total_steps: 2,
             message: "Initializing...".to_string(),
         }
     }

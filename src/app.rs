@@ -2,7 +2,6 @@
 //!
 //! Central application state management for tone.
 
-use crate::config::Config;
 use crate::one::OneClient;
 use crate::resource::{
     extract_json_value, fetch_resources_paginated, get_all_resource_keys, get_resource,
@@ -48,7 +47,6 @@ pub struct ParentContext {
 #[derive(Debug, Clone, Default)]
 pub struct PaginationState {
     pub next_token: Option<String>,
-    pub token_stack: Vec<Option<String>>,
     pub current_page: usize,
     pub has_more: bool,
 }
@@ -93,9 +91,6 @@ pub struct App {
     // Auto-refresh
     pub last_refresh: std::time::Instant,
 
-    // Persistent configuration
-    pub config: Config,
-
     // Key press tracking
     pub last_key_press: Option<(KeyCode, std::time::Instant)>,
 
@@ -115,13 +110,7 @@ pub struct App {
 
 impl App {
     /// Create App from pre-initialized components
-    #[allow(clippy::too_many_arguments)]
-    pub fn from_initialized(
-        client: OneClient,
-        initial_items: Vec<Value>,
-        config: Config,
-        readonly: bool,
-    ) -> Self {
+    pub fn from_initialized(client: OneClient, initial_items: Vec<Value>, readonly: bool) -> Self {
         let filtered_items = initial_items.clone();
         let endpoint = client.credentials.endpoint.clone();
         let username = client.credentials.username.clone();
@@ -147,7 +136,6 @@ impl App {
             describe_scroll: 0,
             describe_data: None,
             last_refresh: std::time::Instant::now(),
-            config,
             last_key_press: None,
             readonly,
             warning_message: None,
@@ -238,30 +226,6 @@ impl App {
         self.loading = false;
         self.mark_refreshed();
         Ok(())
-    }
-
-    pub async fn next_page(&mut self) -> Result<()> {
-        if !self.pagination.has_more {
-            return Ok(());
-        }
-
-        let current_token = self.pagination.next_token.clone();
-        self.pagination.token_stack.push(current_token.clone());
-        self.pagination.current_page += 1;
-
-        self.fetch_page(current_token).await
-    }
-
-    pub async fn prev_page(&mut self) -> Result<()> {
-        if self.pagination.current_page <= 1 {
-            return Ok(());
-        }
-
-        self.pagination.token_stack.pop();
-        let prev_token = self.pagination.token_stack.pop().flatten();
-        self.pagination.current_page -= 1;
-
-        self.fetch_page(prev_token).await
     }
 
     pub fn reset_pagination(&mut self) {

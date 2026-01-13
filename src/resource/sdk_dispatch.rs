@@ -33,19 +33,10 @@ pub async fn invoke_sdk_method(
 async fn invoke_vm(method: &str, client: &OneClient, params: &Value) -> Result<Value> {
     match method {
         "list" | "list_vms" => {
-            let filter = params
-                .get("filter")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(-2) as i32;
-            let start = params
-                .get("start")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(-1) as i32;
+            let filter = params.get("filter").and_then(|v| v.as_i64()).unwrap_or(-2) as i32;
+            let start = params.get("start").and_then(|v| v.as_i64()).unwrap_or(-1) as i32;
             let end = params.get("end").and_then(|v| v.as_i64()).unwrap_or(-1) as i32;
-            let state = params
-                .get("state")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(-1) as i32;
+            let state = params.get("state").and_then(|v| v.as_i64()).unwrap_or(-1) as i32;
             client.list_vms(filter, start, end, state).await
         }
         "get" | "get_vm" => {
@@ -166,7 +157,8 @@ async fn invoke_datastore(method: &str, client: &OneClient, params: &Value) -> R
             let id = params
                 .get("id")
                 .and_then(|v| v.as_i64())
-                .ok_or_else(|| anyhow::anyhow!("Missing datastore id"))? as i32;
+                .ok_or_else(|| anyhow::anyhow!("Missing datastore id"))?
+                as i32;
             client.get_datastore(id).await
         }
         _ => Err(anyhow::anyhow!("Unknown datastore method: {}", method)),
@@ -177,14 +169,8 @@ async fn invoke_datastore(method: &str, client: &OneClient, params: &Value) -> R
 async fn invoke_vnet(method: &str, client: &OneClient, params: &Value) -> Result<Value> {
     match method {
         "list" | "list_vnets" => {
-            let filter = params
-                .get("filter")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(-2) as i32;
-            let start = params
-                .get("start")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(-1) as i32;
+            let filter = params.get("filter").and_then(|v| v.as_i64()).unwrap_or(-2) as i32;
+            let start = params.get("start").and_then(|v| v.as_i64()).unwrap_or(-1) as i32;
             let end = params.get("end").and_then(|v| v.as_i64()).unwrap_or(-1) as i32;
             client.list_vnets(filter, start, end).await
         }
@@ -203,14 +189,8 @@ async fn invoke_vnet(method: &str, client: &OneClient, params: &Value) -> Result
 async fn invoke_image(method: &str, client: &OneClient, params: &Value) -> Result<Value> {
     match method {
         "list" | "list_images" => {
-            let filter = params
-                .get("filter")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(-2) as i32;
-            let start = params
-                .get("start")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(-1) as i32;
+            let filter = params.get("filter").and_then(|v| v.as_i64()).unwrap_or(-2) as i32;
+            let start = params.get("start").and_then(|v| v.as_i64()).unwrap_or(-1) as i32;
             let end = params.get("end").and_then(|v| v.as_i64()).unwrap_or(-1) as i32;
             client.list_images(filter, start, end).await
         }
@@ -229,14 +209,8 @@ async fn invoke_image(method: &str, client: &OneClient, params: &Value) -> Resul
 async fn invoke_template(method: &str, client: &OneClient, params: &Value) -> Result<Value> {
     match method {
         "list" | "list_templates" => {
-            let filter = params
-                .get("filter")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(-2) as i32;
-            let start = params
-                .get("start")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(-1) as i32;
+            let filter = params.get("filter").and_then(|v| v.as_i64()).unwrap_or(-2) as i32;
+            let start = params.get("start").and_then(|v| v.as_i64()).unwrap_or(-1) as i32;
             let end = params.get("end").and_then(|v| v.as_i64()).unwrap_or(-1) as i32;
             client.list_templates(filter, start, end).await
         }
