@@ -45,5 +45,8 @@ thiserror = "1.0"
 dirs = "6.0"
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 
+# Security
+zeroize = { version = "1.8", features = ["derive"] }
+
 [dev-dependencies]
 dirs = "6.0"

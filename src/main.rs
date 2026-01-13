@@ -194,8 +194,8 @@ where
 
     tracing::info!(
         "Connected to OpenNebula at {} as {}",
-        client.credentials.endpoint,
-        client.credentials.username
+        client.endpoint(),
+        client.username()
     );
 
     splash.complete_step();

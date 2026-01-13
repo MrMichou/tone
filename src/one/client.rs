@@ -1,6 +1,11 @@
 //! OpenNebula Client
 //!
 //! Main client for interacting with OpenNebula's XML-RPC API.
+//!
+//! Security features:
+//! - Connection timeouts to prevent DoS
+//! - Credentials are never logged (redacted in trace output)
+//! - Uses secure credential handling from auth module
 
 use super::auth::OneCredentials;
 use super::xmlrpc::{
@@ -9,11 +14,15 @@ use super::xmlrpc::{
 use anyhow::{Context, Result};
 use reqwest::Client;
 use serde_json::Value;
+use std::time::Duration;
+
+/// Default timeout for HTTP requests (30 seconds)
+const DEFAULT_TIMEOUT_SECS: u64 = 30;
 
 /// Main OpenNebula client
 #[derive(Clone)]
 pub struct OneClient {
-    pub credentials: OneCredentials,
+    credentials: OneCredentials,
     http: Client,
 }
 
@@ -24,6 +33,8 @@ impl OneClient {
 
         let http = Client::builder()
             .user_agent("tone/0.1.0")
+            .timeout(Duration::from_secs(DEFAULT_TIMEOUT_SECS))
+            .connect_timeout(Duration::from_secs(10))
             .build()
             .context("Failed to create HTTP client")?;
 
@@ -33,14 +44,26 @@ impl OneClient {
     /// Create a new client with custom endpoint
     pub async fn with_endpoint(endpoint: &str) -> Result<Self> {
         let mut credentials = OneCredentials::new()?;
-        credentials.endpoint = endpoint.to_string();
+        credentials.set_endpoint(endpoint.to_string());
 
         let http = Client::builder()
             .user_agent("tone/0.1.0")
+            .timeout(Duration::from_secs(DEFAULT_TIMEOUT_SECS))
+            .connect_timeout(Duration::from_secs(10))
             .build()
             .context("Failed to create HTTP client")?;
 
         Ok(Self { credentials, http })
+    }
+
+    /// Get the endpoint URL (for display purposes)
+    pub fn endpoint(&self) -> &str {
+        self.credentials.endpoint()
+    }
+
+    /// Get the username (for display purposes)
+    pub fn username(&self) -> &str {
+        self.credentials.username()
     }
 
     /// Make an XML-RPC call to OpenNebula
@@ -51,12 +74,20 @@ impl OneClient {
 
         let xml_request = build_method_call(method, &full_params)?;
 
-        tracing::debug!("XML-RPC call: {} to {}", method, self.credentials.endpoint);
-        tracing::trace!("Request XML: {}", xml_request);
+        tracing::debug!(
+            "XML-RPC call: {} to {}",
+            method,
+            self.credentials.endpoint()
+        );
+        // SECURITY: Never log the actual request XML as it contains credentials
+        tracing::trace!(
+            "Request XML: [REDACTED - contains credentials] ({} bytes)",
+            xml_request.len()
+        );
 
         let response = self
             .http
-            .post(&self.credentials.endpoint)
+            .post(self.credentials.endpoint())
             .header("Content-Type", "text/xml")
             .body(xml_request)
             .send()
@@ -70,15 +101,13 @@ impl OneClient {
             .context("Failed to read response body")?;
 
         if !status.is_success() {
-            tracing::error!("HTTP error: {} - {}", status, body);
-            return Err(anyhow::anyhow!(
-                "HTTP request failed: {} - {}",
-                status,
-                body
-            ));
+            // SECURITY: Don't log full response body as it may contain sensitive data
+            tracing::error!("HTTP error: {} (response: {} bytes)", status, body.len());
+            return Err(anyhow::anyhow!("HTTP request failed: {}", status));
         }
 
-        tracing::trace!("Response XML: {}", body);
+        // SECURITY: Only log response size, not content
+        tracing::trace!("Response XML: {} bytes received", body.len());
 
         let parsed = parse_response(&body)?;
 
@@ -332,24 +361,34 @@ impl OneClient {
 }
 
 /// Format an OpenNebula API error for display
+/// This function sanitizes error messages to prevent information disclosure
 pub fn format_one_error(error: &anyhow::Error) -> String {
     let error_str = error.to_string();
 
-    // Clean up common error patterns
+    // Clean up common error patterns with safe messages
     if error_str.contains("401") || error_str.contains("Authentication") {
         return "Authentication failed. Check ONE_AUTH credentials.".to_string();
     }
     if error_str.contains("Connection refused") {
         return "Connection refused. Check ONE_XMLRPC endpoint.".to_string();
     }
-    if error_str.contains("timeout") {
+    if error_str.contains("timeout") || error_str.contains("timed out") {
         return "Request timed out. Server may be unreachable.".to_string();
     }
-
-    // Truncate long error messages
-    if error_str.len() > 100 {
-        format!("{}...", &error_str[..100])
-    } else {
-        error_str
+    if error_str.contains("certificate") || error_str.contains("SSL") || error_str.contains("TLS") {
+        return "TLS/SSL error. Check certificate configuration.".to_string();
     }
+
+    // For OpenNebula API errors, extract just the message
+    if let Some(start) = error_str.find("OpenNebula API error:") {
+        let msg = &error_str[start..];
+        // Truncate long error messages
+        if msg.len() > 100 {
+            return format!("{}...", &msg[..100]);
+        }
+        return msg.to_string();
+    }
+
+    // Generic fallback - don't expose internal details
+    "An error occurred. Check logs for details.".to_string()
 }

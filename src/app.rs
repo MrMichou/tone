@@ -112,8 +112,8 @@ impl App {
     /// Create App from pre-initialized components
     pub fn from_initialized(client: OneClient, initial_items: Vec<Value>, readonly: bool) -> Self {
         let filtered_items = initial_items.clone();
-        let endpoint = client.credentials.endpoint.clone();
-        let username = client.credentials.username.clone();
+        let endpoint = client.endpoint().to_string();
+        let username = client.username().to_string();
 
         Self {
             client,
