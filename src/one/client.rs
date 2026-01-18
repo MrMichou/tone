@@ -50,7 +50,9 @@ impl OneClient {
         let xml_request = build_method_call(method, &full_params)?;
 
         tracing::debug!("XML-RPC call: {} to {}", method, self.credentials.endpoint);
-        tracing::trace!("Request XML: {}", xml_request);
+        // Sanitize auth string before logging to avoid credential leakage
+        let sanitized_xml = xml_request.replace(&self.credentials.auth_string(), "***:***");
+        tracing::trace!("Request XML: {}", sanitized_xml);
 
         let response = self
             .http

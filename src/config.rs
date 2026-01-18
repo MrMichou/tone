@@ -6,6 +6,9 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
 /// Persistent configuration
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
@@ -44,7 +47,14 @@ impl Config {
         }
 
         let content = serde_json::to_string_pretty(self)?;
-        std::fs::write(&path, content)?;
+        std::fs::write(&path, &content)?;
+
+        // Set restrictive permissions (0600) on Unix systems to protect config
+        #[cfg(unix)]
+        {
+            let permissions = std::fs::Permissions::from_mode(0o600);
+            std::fs::set_permissions(&path, permissions)?;
+        }
 
         Ok(())
     }
