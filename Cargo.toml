@@ -21,7 +21,7 @@ url = "2.5"
 urlencoding = "2.1"
 
 # XML-RPC for OpenNebula API
-quick-xml = { version = "0.37", features = ["serialize"] }
+quick-xml = { version = "0.39", features = ["serialize"] }
 base64 = "0.22"
 
 # Async runtime
