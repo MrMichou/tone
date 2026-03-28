@@ -21,15 +21,41 @@ A terminal user interface for navigating, observing, and managing OpenNebula clo
 
 ## Installation
 
+### Homebrew (macOS / Linux)
+
+```bash
+brew install MrMichou/tap/tone
+```
+
+### Shell installer (macOS / Linux)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/MrMichou/tone/master/install.sh | sh
+```
+
+### Debian / Ubuntu
+
+Download the `.deb` package from the [latest release](https://github.com/MrMichou/tone/releases/latest):
+
+```bash
+sudo dpkg -i tone-amd64.deb
+```
+
+### Scoop (Windows)
+
+```powershell
+scoop install https://github.com/MrMichou/tone/releases/latest/download/tone.json
+```
+
+### Download binaries
+
+Pre-built binaries for Linux (x86_64, aarch64), macOS (x86_64, Apple Silicon), and Windows (x86_64) are available on the [releases page](https://github.com/MrMichou/tone/releases/latest).
+
 ### From source
 
 ```bash
 cargo install --path .
-```
-
-### Build
-
-```bash
+# or
 cargo build --release
 ```
 

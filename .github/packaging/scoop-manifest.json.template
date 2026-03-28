@@ -1,0 +1,23 @@
+{
+  "version": "@@VERSION@@",
+  "description": "Terminal UI for OpenNebula",
+  "homepage": "https://github.com/MrMichou/tone",
+  "license": "MIT",
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/MrMichou/tone/releases/download/v@@VERSION@@/tone-x86_64-pc-windows-msvc.zip",
+      "hash": "@@SHA256_WINDOWS_X86_64@@"
+    }
+  },
+  "bin": "tone.exe",
+  "checkver": {
+    "github": "https://github.com/MrMichou/tone"
+  },
+  "autoupdate": {
+    "architecture": {
+      "64bit": {
+        "url": "https://github.com/MrMichou/tone/releases/download/v$version/tone-x86_64-pc-windows-msvc.zip"
+      }
+    }
+  }
+}
