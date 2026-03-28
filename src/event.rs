@@ -31,6 +31,7 @@ async fn handle_key(app: &mut App, code: KeyCode, modifiers: KeyModifiers) -> Re
         Mode::Confirm => handle_confirm_mode(app, code, modifiers).await,
         Mode::Warning => handle_warning_mode(app, code),
         Mode::Describe => handle_describe_mode(app, code, modifiers),
+        Mode::HostSelect => handle_host_select_mode(app, code).await,
     }
 }
 
@@ -140,6 +141,19 @@ async fn handle_normal_mode(app: &mut App, code: KeyCode, modifiers: KeyModifier
                         }
                         if let Some(item) = app.selected_item() {
                             let resource_id = extract_json_value(item, &resource.id_field);
+
+                            // Migration needs host selection before confirmation
+                            if action.sdk_method == "migrate" {
+                                let vm_name = extract_json_value(item, &resource.name_field);
+                                let vm_name = if vm_name != "-" && !vm_name.is_empty() {
+                                    vm_name
+                                } else {
+                                    resource_id.clone()
+                                };
+                                app.enter_host_select_mode(resource_id, vm_name).await;
+                                return Ok(false);
+                            }
+
                             if let Some(pending) = app.create_pending_action(action, &resource_id) {
                                 app.enter_confirm_mode(pending);
                             }
@@ -293,6 +307,59 @@ fn handle_describe_mode(app: &mut App, code: KeyCode, modifiers: KeyModifiers) -
     Ok(false)
 }
 
+async fn handle_host_select_mode(app: &mut App, code: KeyCode) -> Result<bool> {
+    match code {
+        KeyCode::Esc | KeyCode::Char('q') => {
+            app.exit_mode();
+        }
+        KeyCode::Char('j') | KeyCode::Down => {
+            if !app.host_list.is_empty() {
+                app.host_select_index =
+                    (app.host_select_index + 1).min(app.host_list.len() - 1);
+            }
+        }
+        KeyCode::Char('k') | KeyCode::Up => {
+            app.host_select_index = app.host_select_index.saturating_sub(1);
+        }
+        KeyCode::Char('g') => {
+            app.host_select_index = 0;
+        }
+        KeyCode::Char('G') => {
+            if !app.host_list.is_empty() {
+                app.host_select_index = app.host_list.len() - 1;
+            }
+        }
+        KeyCode::Enter => {
+            if let Some(host) = app.selected_host().cloned() {
+                let host_name = extract_json_value(&host, "NAME");
+                let host_id = extract_json_value(&host, "ID");
+                let vm_id = app.migrate_vm_id.clone().unwrap_or_default();
+                let vm_name = app.migrate_vm_name.clone().unwrap_or_default();
+
+                let pending = crate::app::PendingAction {
+                    service: "vm".to_string(),
+                    sdk_method: "migrate".to_string(),
+                    resource_id: vm_id,
+                    message: format!(
+                        "Live migrate VM '{}' to host '{}' (ID {})?",
+                        vm_name, host_name, host_id
+                    ),
+                    default_no: true,
+                    destructive: false,
+                    selected_yes: false,
+                };
+
+                // Store host_id for execute_pending_action
+                app.migrate_host_id = Some(host_id);
+                app.pending_action = Some(pending);
+                app.mode = Mode::Confirm;
+            }
+        }
+        _ => {}
+    }
+    Ok(false)
+}
+
 async fn execute_pending_action(app: &mut App) -> Result<()> {
     let Some(pending) = app.pending_action.take() else {
         return Ok(());
@@ -300,9 +367,16 @@ async fn execute_pending_action(app: &mut App) -> Result<()> {
 
     app.loading = true;
 
-    let params = serde_json::json!({
+    let mut params = serde_json::json!({
         "id": pending.resource_id.parse::<i32>().unwrap_or(0)
     });
+
+    // For migrate actions, include the target host_id
+    if pending.sdk_method == "migrate" {
+        if let Some(host_id) = app.migrate_host_id.take() {
+            params["host_id"] = serde_json::json!(host_id.parse::<i32>().unwrap_or(0));
+        }
+    }
 
     match invoke_sdk_method(&pending.service, &pending.sdk_method, &app.client, &params).await {
         Ok(_) => {

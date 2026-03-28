@@ -115,6 +115,17 @@
             "default_yes": true,
             "destructive": false
           }
+        },
+        {
+          "key": "migrate",
+          "display_name": "Live Migrate",
+          "shortcut": "m",
+          "sdk_method": "migrate",
+          "confirm": {
+            "message": "Live migrate VM",
+            "default_yes": false,
+            "destructive": false
+          }
         }
       ],
       "detail_sdk_method": "get"

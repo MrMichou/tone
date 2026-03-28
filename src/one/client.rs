@@ -195,6 +195,31 @@ impl OneClient {
         .await
     }
 
+    /// Migrate a VM to another host (one.vm.migrate)
+    /// live: true for live migration, false for cold migration
+    /// enforce: true to bypass capacity checks on target host
+    /// ds_id: target datastore ID, -1 to use current
+    pub async fn vm_migrate(
+        &self,
+        vm_id: i32,
+        host_id: i32,
+        live: bool,
+        enforce: bool,
+        ds_id: i32,
+    ) -> Result<Value> {
+        self.call(
+            "one.vm.migrate",
+            vec![
+                XmlRpcValue::Int(vm_id),
+                XmlRpcValue::Int(host_id),
+                XmlRpcValue::Boolean(live),
+                XmlRpcValue::Boolean(enforce),
+                XmlRpcValue::Int(ds_id),
+            ],
+        )
+        .await
+    }
+
     // =========================================================================
     // Host Pool API
     // =========================================================================
