@@ -108,6 +108,9 @@ pub struct App {
     pub endpoint: String,
     pub username: String,
 
+    // Demo mode
+    pub demo_mode: bool,
+
     // Host selection (for migration)
     pub host_list: Vec<Value>,
     pub host_select_index: usize,
@@ -150,6 +153,7 @@ impl App {
             pagination: PaginationState::default(),
             endpoint,
             username,
+            demo_mode: false,
             host_list: Vec::new(),
             host_select_index: 0,
             migrate_vm_id: None,
@@ -197,6 +201,27 @@ impl App {
     async fn fetch_page(&mut self, page_token: Option<String>) -> Result<()> {
         if self.current_resource().is_none() {
             self.error_message = Some(format!("Unknown resource: {}", self.current_resource_key));
+            return Ok(());
+        }
+
+        // Demo mode: serve fake data instead of calling the API
+        if self.demo_mode {
+            self.loading = true;
+            self.error_message = None;
+
+            self.items = match self.current_resource_key.as_str() {
+                "one-vms" => crate::demo::demo_vms(),
+                "one-hosts" => crate::demo::demo_hosts(),
+                _ => {
+                    self.error_message =
+                        Some(format!("Demo: no data for {}", self.current_resource_key));
+                    Vec::new()
+                }
+            };
+            self.apply_filter();
+            self.selected = 0;
+            self.pagination = PaginationState::default();
+            self.loading = false;
             return Ok(());
         }
 
@@ -493,39 +518,45 @@ impl App {
 
     pub async fn enter_host_select_mode(&mut self, vm_id: String, vm_name: String) {
         self.loading = true;
-        match crate::resource::invoke_sdk_method(
-            "host",
-            "list",
-            &self.client,
-            &serde_json::json!({}),
-        )
-        .await
-        {
-            Ok(data) => {
-                let hosts =
+
+        let hosts = if self.demo_mode {
+            crate::demo::demo_hosts()
+        } else {
+            match crate::resource::invoke_sdk_method(
+                "host",
+                "list",
+                &self.client,
+                &serde_json::json!({}),
+            )
+            .await
+            {
+                Ok(data) => {
                     if let Some(arr) = data.pointer("/HOST_POOL/HOST").and_then(|v| v.as_array()) {
                         arr.clone()
                     } else if let Some(obj) = data.pointer("/HOST_POOL/HOST") {
-                        // Single host case: OpenNebula returns an object instead of array
                         vec![obj.clone()]
                     } else {
                         Vec::new()
-                    };
-
-                if hosts.is_empty() {
-                    self.show_warning("No hosts available for migration");
-                } else {
-                    self.host_list = hosts;
-                    self.host_select_index = 0;
-                    self.migrate_vm_id = Some(vm_id);
-                    self.migrate_vm_name = Some(vm_name);
-                    self.mode = Mode::HostSelect;
+                    }
+                }
+                Err(e) => {
+                    self.error_message = Some(crate::one::client::format_one_error(&e));
+                    self.loading = false;
+                    return;
                 }
             }
-            Err(e) => {
-                self.error_message = Some(crate::one::client::format_one_error(&e));
-            }
+        };
+
+        if hosts.is_empty() {
+            self.show_warning("No hosts available for migration");
+        } else {
+            self.host_list = hosts;
+            self.host_select_index = 0;
+            self.migrate_vm_id = Some(vm_id);
+            self.migrate_vm_name = Some(vm_name);
+            self.mode = Mode::HostSelect;
         }
+
         self.loading = false;
     }
 

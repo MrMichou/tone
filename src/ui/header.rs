@@ -46,7 +46,14 @@ pub fn render(f: &mut Frame, app: &App, area: Rect) {
         Span::styled(&app.username, Style::default().fg(Color::Green)),
         Span::styled(" | ", Style::default().fg(Color::DarkGray)),
         Span::styled("Mode: ", Style::default().fg(Color::DarkGray)),
-        if app.readonly {
+        if app.demo_mode {
+            Span::styled(
+                "DEMO",
+                Style::default()
+                    .fg(Color::Magenta)
+                    .add_modifier(Modifier::BOLD),
+            )
+        } else if app.readonly {
             Span::styled("READ-ONLY", Style::default().fg(Color::Yellow))
         } else {
             Span::styled("READ-WRITE", Style::default().fg(Color::Green))

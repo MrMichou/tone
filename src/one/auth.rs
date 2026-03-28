@@ -68,6 +68,15 @@ impl OneCredentials {
         &self.endpoint
     }
 
+    /// Create dummy credentials (for demo/test mode, no real connection)
+    pub fn dummy(username: &str, endpoint: &str) -> Self {
+        Self {
+            username: username.to_string(),
+            password: String::new(),
+            endpoint: endpoint.to_string(),
+        }
+    }
+
     /// Create credentials for testing without file/env lookup
     #[cfg(test)]
     pub fn for_testing(username: &str, password: &str, endpoint: &str) -> Self {

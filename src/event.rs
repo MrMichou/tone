@@ -364,6 +364,16 @@ async fn execute_pending_action(app: &mut App) -> Result<()> {
         return Ok(());
     };
 
+    // Demo mode: simulate action success
+    if app.demo_mode {
+        app.show_warning(&format!(
+            "Demo: '{}' simulated on resource {}",
+            pending.sdk_method, pending.resource_id
+        ));
+        app.migrate_host_id = None;
+        return Ok(());
+    }
+
     app.loading = true;
 
     let mut params = serde_json::json!({

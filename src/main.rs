@@ -4,6 +4,7 @@
 //! OpenNebula cloud resources.
 
 mod app;
+mod demo;
 mod event;
 mod one;
 mod resource;
@@ -47,6 +48,10 @@ struct Args {
     /// Run in read-only mode (block all write operations)
     #[arg(long)]
     readonly: bool,
+
+    /// Run in demo mode with fake data (no OpenNebula connection required)
+    #[arg(long)]
+    demo: bool,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -180,6 +185,26 @@ where
 
     if check_abort()? {
         return Ok(None);
+    }
+
+    if args.demo {
+        // Demo mode: use fake data, no real connection
+        splash.set_message("Loading demo data...");
+        terminal.draw(|f| render_splash(f, &splash))?;
+
+        let client = one::OneClient::demo();
+        let vms = demo::demo_vms();
+
+        splash.complete_step();
+        splash.set_message("Demo mode ready!");
+        terminal.draw(|f| render_splash(f, &splash))?;
+
+        tokio::time::sleep(Duration::from_millis(200)).await;
+
+        let mut app = App::from_initialized(client, vms, args.readonly);
+        app.demo_mode = true;
+
+        return Ok(Some(app));
     }
 
     // Step 1: Initialize OpenNebula client

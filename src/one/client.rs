@@ -56,6 +56,17 @@ impl OneClient {
         Ok(Self { credentials, http })
     }
 
+    /// Create a dummy client that won't make real API calls (for demo mode)
+    pub fn demo() -> Self {
+        let credentials =
+            OneCredentials::dummy("demo-user", "http://demo.opennebula.local:2633/RPC2");
+        let http = Client::builder()
+            .user_agent("tone/0.1.0-demo")
+            .build()
+            .expect("Failed to create HTTP client");
+        Self { credentials, http }
+    }
+
     /// Create a client for testing with explicit credentials (no file/env lookup)
     #[cfg(test)]
     pub fn for_testing(endpoint: &str) -> Self {
