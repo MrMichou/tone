@@ -152,7 +152,8 @@ async fn handle_normal_mode(app: &mut App, code: KeyCode, modifiers: KeyModifier
                                 };
                                 // Extract current host ID from VM's history records
                                 let current_host_id = crate::app::extract_vm_current_host_id(item);
-                                app.enter_host_select_mode(resource_id, vm_name, current_host_id).await;
+                                app.enter_host_select_mode(resource_id, vm_name, current_host_id)
+                                    .await;
                                 return Ok(false);
                             }
 

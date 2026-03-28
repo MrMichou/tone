@@ -729,13 +729,11 @@ pub fn extract_vm_current_host_id(vm: &Value) -> Option<String> {
     } else {
         history
     };
-    latest
-        .get("HID")
-        .and_then(|v| match v {
-            Value::String(s) => Some(s.clone()),
-            Value::Number(n) => Some(n.to_string()),
-            _ => None,
-        })
+    latest.get("HID").and_then(|v| match v {
+        Value::String(s) => Some(s.clone()),
+        Value::Number(n) => Some(n.to_string()),
+        _ => None,
+    })
 }
 
 #[cfg(test)]
