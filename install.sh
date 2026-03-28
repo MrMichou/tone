@@ -38,6 +38,9 @@ get_version() {
             | grep '"tag_name"' \
             | sed -E 's/.*"([^"]+)".*/\1/')
     fi
+    if [ -z "$VERSION" ]; then
+        error "Failed to determine latest version. Try specifying a version: ./install.sh v0.1.0"
+    fi
     echo "Version: ${VERSION}"
 }
 

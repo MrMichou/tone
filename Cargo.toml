@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Terminal UI for OpenNebula - navigate, observe, and manage OpenNebula resources"
 license = "MIT"
-repository = "https://github.com/mnicolet/tone"
+repository = "https://github.com/MrMichou/tone"
 readme = "README.md"
 keywords = ["opennebula", "tui", "terminal", "cloud", "infrastructure"]
 categories = ["command-line-utilities", "development-tools"]
@@ -50,7 +50,7 @@ zeroize = { version = "1.8", features = ["derive"] }
 
 [package.metadata.deb]
 maintainer = "mnicolet"
-copyright = "2025, mnicolet"
+copyright = "2025-2026, mnicolet"
 extended-description = "Terminal UI for OpenNebula - navigate, observe, and manage OpenNebula cloud resources from your terminal."
 section = "utils"
 priority = "optional"

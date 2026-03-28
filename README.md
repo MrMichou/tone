@@ -38,7 +38,7 @@ curl -fsSL https://raw.githubusercontent.com/MrMichou/tone/master/install.sh | s
 Download the `.deb` package from the [latest release](https://github.com/MrMichou/tone/releases/latest):
 
 ```bash
-sudo dpkg -i tone_amd64.deb
+sudo dpkg -i tone-amd64.deb
 ```
 
 ### Scoop (Windows)
