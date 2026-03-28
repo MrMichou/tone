@@ -198,7 +198,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -313,7 +313,7 @@ jobs:
     if: ${{ !contains(github.ref_name, '-') }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download artifacts
         uses: actions/download-artifact@v8
@@ -337,13 +337,14 @@ jobs:
               .github/packaging/homebrew-formula.rb.template > tone.rb
 
       - name: Push to homebrew-tap
-        uses: dmnemec/copy_file_to_another_repo_action@bbebd3da22c24d7f97b25f7f2cda1a992261ef3d # v1.1.1
         env:
-          API_TOKEN_GITHUB: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-        with:
-          source_file: "tone.rb"
-          destination_repo: "MrMichou/homebrew-tap"
-          destination_folder: "Formula"
-          user_email: "github-actions[bot]@users.noreply.github.com"
-          user_name: "github-actions[bot]"
-          commit_message: "Update tone to ${{ github.ref_name }}"
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          git clone https://x-access-token:${GH_TOKEN}@github.com/MrMichou/homebrew-tap.git tap
+          cp tone.rb tap/Formula/tone.rb
+          cd tap
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add Formula/tone.rb
+          git diff --cached --quiet || git commit -m "Update tone to ${{ github.ref_name }}"
+          git push
