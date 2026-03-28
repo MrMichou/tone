@@ -14,12 +14,13 @@ use serde_json::Value;
 /// Application modes
 #[derive(Debug, Clone, PartialEq)]
 pub enum Mode {
-    Normal,   // Viewing list
-    Command,  // : command input
-    Help,     // ? help popup
-    Confirm,  // Confirmation dialog
-    Warning,  // Warning/info dialog (OK only)
-    Describe, // Viewing JSON details of selected item
+    Normal,     // Viewing list
+    Command,    // : command input
+    Help,       // ? help popup
+    Confirm,    // Confirmation dialog
+    Warning,    // Warning/info dialog (OK only)
+    Describe,   // Viewing JSON details of selected item
+    HostSelect, // Selecting a target host (for migration)
 }
 
 /// Pending action that requires confirmation
@@ -106,6 +107,13 @@ pub struct App {
     // Endpoint info
     pub endpoint: String,
     pub username: String,
+
+    // Host selection (for migration)
+    pub host_list: Vec<Value>,
+    pub host_select_index: usize,
+    pub migrate_vm_id: Option<String>,
+    pub migrate_vm_name: Option<String>,
+    pub migrate_host_id: Option<String>,
 }
 
 impl App {
@@ -142,6 +150,11 @@ impl App {
             pagination: PaginationState::default(),
             endpoint,
             username,
+            host_list: Vec::new(),
+            host_select_index: 0,
+            migrate_vm_id: None,
+            migrate_vm_name: None,
+            migrate_host_id: None,
         }
     }
 
@@ -478,10 +491,56 @@ impl App {
         })
     }
 
+    pub async fn enter_host_select_mode(&mut self, vm_id: String, vm_name: String) {
+        self.loading = true;
+        match crate::resource::invoke_sdk_method(
+            "host",
+            "list",
+            &self.client,
+            &serde_json::json!({}),
+        )
+        .await
+        {
+            Ok(data) => {
+                let hosts =
+                    if let Some(arr) = data.pointer("/HOST_POOL/HOST").and_then(|v| v.as_array()) {
+                        arr.clone()
+                    } else if let Some(obj) = data.pointer("/HOST_POOL/HOST") {
+                        // Single host case: OpenNebula returns an object instead of array
+                        vec![obj.clone()]
+                    } else {
+                        Vec::new()
+                    };
+
+                if hosts.is_empty() {
+                    self.show_warning("No hosts available for migration");
+                } else {
+                    self.host_list = hosts;
+                    self.host_select_index = 0;
+                    self.migrate_vm_id = Some(vm_id);
+                    self.migrate_vm_name = Some(vm_name);
+                    self.mode = Mode::HostSelect;
+                }
+            }
+            Err(e) => {
+                self.error_message = Some(crate::one::client::format_one_error(&e));
+            }
+        }
+        self.loading = false;
+    }
+
+    pub fn selected_host(&self) -> Option<&Value> {
+        self.host_list.get(self.host_select_index)
+    }
+
     pub fn exit_mode(&mut self) {
         self.mode = Mode::Normal;
         self.pending_action = None;
         self.describe_data = None;
+        self.host_list.clear();
+        self.migrate_vm_id = None;
+        self.migrate_vm_name = None;
+        self.migrate_host_id = None;
     }
 
     // =========================================================================
@@ -635,5 +694,39 @@ impl App {
         }
 
         Ok(false)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pending_action_for_migration() {
+        let pending = PendingAction {
+            service: "vm".to_string(),
+            sdk_method: "migrate".to_string(),
+            resource_id: "42".to_string(),
+            message: "Live migrate VM 'web-server' to host 'node-1' (ID 7)?".to_string(),
+            default_no: true,
+            destructive: false,
+            selected_yes: false,
+        };
+
+        assert_eq!(pending.service, "vm");
+        assert_eq!(pending.sdk_method, "migrate");
+        assert_eq!(pending.resource_id, "42");
+        assert!(!pending.destructive);
+        assert!(!pending.selected_yes);
+        assert!(pending.message.contains("web-server"));
+        assert!(pending.message.contains("node-1"));
+    }
+
+    #[test]
+    fn test_host_select_mode_variant() {
+        let mode = Mode::HostSelect;
+        assert_eq!(mode, Mode::HostSelect);
+        assert_ne!(mode, Mode::Normal);
+        assert_ne!(mode, Mode::Confirm);
     }
 }

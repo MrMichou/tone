@@ -219,4 +219,33 @@ mod tests {
         assert!(!keys.is_empty(), "Should have resource types");
         assert!(keys.contains(&"one-vms"), "Should contain one-vms");
     }
+
+    #[test]
+    fn test_migrate_action_exists() {
+        let resource = get_resource("one-vms").expect("VM resource should exist");
+        let migrate = resource
+            .actions
+            .iter()
+            .find(|a| a.key == "migrate")
+            .expect("Migrate action should exist");
+        assert_eq!(migrate.display_name, "Live Migrate");
+        assert_eq!(migrate.sdk_method, "migrate");
+        assert_eq!(migrate.shortcut.as_deref(), Some("m"));
+    }
+
+    #[test]
+    fn test_migrate_action_confirm_config() {
+        let resource = get_resource("one-vms").unwrap();
+        let migrate = resource
+            .actions
+            .iter()
+            .find(|a| a.key == "migrate")
+            .unwrap();
+        let config = migrate
+            .get_confirm_config()
+            .expect("Migrate should have confirm config");
+        assert!(!config.default_yes);
+        assert!(!config.destructive);
+        assert_eq!(config.message, Some("Live migrate VM".to_string()));
+    }
 }
