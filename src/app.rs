@@ -491,7 +491,12 @@ impl App {
         })
     }
 
-    pub async fn enter_host_select_mode(&mut self, vm_id: String, vm_name: String) {
+    pub async fn enter_host_select_mode(
+        &mut self,
+        vm_id: String,
+        vm_name: String,
+        current_host_id: Option<String>,
+    ) {
         self.loading = true;
         match crate::resource::invoke_sdk_method(
             "host",
@@ -512,8 +517,22 @@ impl App {
                         Vec::new()
                     };
 
+                // Filter out the current host so the user cannot accidentally
+                // select it as migration target (OpenNebula would reject it anyway).
+                let hosts: Vec<Value> = if let Some(ref cur_id) = current_host_id {
+                    hosts
+                        .into_iter()
+                        .filter(|h| {
+                            let id = extract_json_value(h, "ID");
+                            &id != cur_id
+                        })
+                        .collect()
+                } else {
+                    hosts
+                };
+
                 if hosts.is_empty() {
-                    self.show_warning("No hosts available for migration");
+                    self.show_warning("No other hosts available for migration");
                 } else {
                     self.host_list = hosts;
                     self.host_select_index = 0;
@@ -697,6 +716,28 @@ impl App {
     }
 }
 
+/// Extract the current host ID from a VM's history records.
+///
+/// OpenNebula stores migration history in `HISTORY_RECORDS.HISTORY`.
+/// When there are multiple records it is an array (latest last);
+/// when there is a single record it is an object.  We return the `HID`
+/// (host ID) from the most recent entry.
+pub fn extract_vm_current_host_id(vm: &Value) -> Option<String> {
+    let history = vm.pointer("/HISTORY_RECORDS/HISTORY")?;
+    let latest = if let Some(arr) = history.as_array() {
+        arr.last()?
+    } else {
+        history
+    };
+    latest
+        .get("HID")
+        .and_then(|v| match v {
+            Value::String(s) => Some(s.clone()),
+            Value::Number(n) => Some(n.to_string()),
+            _ => None,
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -728,5 +769,40 @@ mod tests {
         assert_eq!(mode, Mode::HostSelect);
         assert_ne!(mode, Mode::Normal);
         assert_ne!(mode, Mode::Confirm);
+    }
+
+    #[test]
+    fn test_extract_vm_current_host_id_single_history() {
+        let vm = serde_json::json!({
+            "ID": "100",
+            "HISTORY_RECORDS": {
+                "HISTORY": {
+                    "HID": "3",
+                    "HOSTNAME": "node-3"
+                }
+            }
+        });
+        assert_eq!(extract_vm_current_host_id(&vm), Some("3".to_string()));
+    }
+
+    #[test]
+    fn test_extract_vm_current_host_id_multiple_history() {
+        let vm = serde_json::json!({
+            "ID": "100",
+            "HISTORY_RECORDS": {
+                "HISTORY": [
+                    { "HID": "1", "HOSTNAME": "node-1" },
+                    { "HID": "5", "HOSTNAME": "node-5" }
+                ]
+            }
+        });
+        // Should return the last (most recent) entry
+        assert_eq!(extract_vm_current_host_id(&vm), Some("5".to_string()));
+    }
+
+    #[test]
+    fn test_extract_vm_current_host_id_no_history() {
+        let vm = serde_json::json!({ "ID": "100" });
+        assert_eq!(extract_vm_current_host_id(&vm), None);
     }
 }
