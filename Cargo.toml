@@ -61,3 +61,4 @@ assets = [
 
 [dev-dependencies]
 dirs = "6.0"
+wiremock = "0.6"

@@ -68,6 +68,16 @@ impl OneCredentials {
         &self.endpoint
     }
 
+    /// Create credentials for testing without file/env lookup
+    #[cfg(test)]
+    pub fn for_testing(username: &str, password: &str, endpoint: &str) -> Self {
+        Self {
+            username: username.to_string(),
+            password: password.to_string(),
+            endpoint: endpoint.to_string(),
+        }
+    }
+
     /// Set a custom endpoint
     pub fn set_endpoint(&mut self, endpoint: String) {
         Self::warn_insecure_endpoint(&endpoint);

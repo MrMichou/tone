@@ -56,6 +56,19 @@ impl OneClient {
         Ok(Self { credentials, http })
     }
 
+    /// Create a client for testing with explicit credentials (no file/env lookup)
+    #[cfg(test)]
+    pub fn for_testing(endpoint: &str) -> Self {
+        use super::auth::OneCredentials;
+        let credentials = OneCredentials::for_testing("test", "test", endpoint);
+        let http = Client::builder()
+            .user_agent("tone/0.1.0-test")
+            .timeout(Duration::from_secs(5))
+            .build()
+            .expect("Failed to create HTTP client for testing");
+        Self { credentials, http }
+    }
+
     /// Get the endpoint URL (for display purposes)
     pub fn endpoint(&self) -> &str {
         self.credentials.endpoint()
@@ -382,6 +395,221 @@ impl OneClient {
     /// Get system config (one.system.config)
     pub async fn get_system_config(&self) -> Result<Value> {
         self.call("one.system.config", vec![]).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wiremock::matchers::{body_string_contains, method};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    /// Helper: build an XML-RPC success response wrapping an XML data string
+    fn xmlrpc_success_response(xml_data: &str) -> String {
+        // Escape XML inside the string value
+        let escaped = xml_data
+            .replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;");
+        format!(
+            r#"<?xml version="1.0"?>
+<methodResponse><params><param><value><array><data>
+  <value><boolean>1</boolean></value>
+  <value><string>{}</string></value>
+  <value><int>0</int></value>
+</data></array></value></param></params></methodResponse>"#,
+            escaped
+        )
+    }
+
+    /// Helper: build an XML-RPC success response returning an int
+    fn xmlrpc_success_int(val: i32) -> String {
+        format!(
+            r#"<?xml version="1.0"?>
+<methodResponse><params><param><value><array><data>
+  <value><boolean>1</boolean></value>
+  <value><int>{}</int></value>
+  <value><int>0</int></value>
+</data></array></value></param></params></methodResponse>"#,
+            val
+        )
+    }
+
+    /// Helper: build an XML-RPC error response
+    fn xmlrpc_error_response(msg: &str) -> String {
+        let escaped = msg
+            .replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;");
+        format!(
+            r#"<?xml version="1.0"?>
+<methodResponse><params><param><value><array><data>
+  <value><boolean>0</boolean></value>
+  <value><string>{}</string></value>
+  <value><int>-1</int></value>
+</data></array></value></param></params></methodResponse>"#,
+            escaped
+        )
+    }
+
+    #[tokio::test]
+    async fn test_list_hosts_returns_host_pool() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("POST"))
+            .and(body_string_contains("one.hostpool.info"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(xmlrpc_success_response(
+                r#"<HOST_POOL><HOST><ID>0</ID><NAME>node-0</NAME><CLUSTER>default</CLUSTER><STATE>2</STATE><HOST_SHARE><RUNNING_VMS>5</RUNNING_VMS></HOST_SHARE></HOST><HOST><ID>1</ID><NAME>node-1</NAME><CLUSTER>default</CLUSTER><STATE>2</STATE><HOST_SHARE><RUNNING_VMS>3</RUNNING_VMS></HOST_SHARE></HOST></HOST_POOL>"#,
+            )))
+            .mount(&mock_server)
+            .await;
+
+        let client = OneClient::for_testing(&mock_server.uri());
+        let result = client
+            .list_hosts()
+            .await
+            .expect("list_hosts should succeed");
+
+        let hosts = result
+            .pointer("/HOST_POOL/HOST")
+            .and_then(|v| v.as_array())
+            .expect("Should have HOST array");
+        assert_eq!(hosts.len(), 2);
+        assert_eq!(hosts[0]["NAME"], "node-0");
+        assert_eq!(hosts[1]["NAME"], "node-1");
+        assert_eq!(hosts[1]["HOST_SHARE"]["RUNNING_VMS"], "3");
+    }
+
+    #[tokio::test]
+    async fn test_vm_migrate_success() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("POST"))
+            .and(body_string_contains("one.vm.migrate"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(xmlrpc_success_int(42)))
+            .mount(&mock_server)
+            .await;
+
+        let client = OneClient::for_testing(&mock_server.uri());
+        let result = client
+            .vm_migrate(42, 1, true, false, -1)
+            .await
+            .expect("vm_migrate should succeed");
+
+        assert_eq!(result, serde_json::json!(42));
+    }
+
+    #[tokio::test]
+    async fn test_vm_migrate_api_error() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("POST"))
+            .and(body_string_contains("one.vm.migrate"))
+            .respond_with(
+                ResponseTemplate::new(200).set_body_string(xmlrpc_error_response(
+                    "[one.vm.migrate] Cannot migrate VM 42 to host 99: host not found",
+                )),
+            )
+            .mount(&mock_server)
+            .await;
+
+        let client = OneClient::for_testing(&mock_server.uri());
+        let result = client.vm_migrate(42, 99, true, false, -1).await;
+
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Cannot migrate VM 42"));
+        assert!(err.contains("host not found"));
+    }
+
+    #[tokio::test]
+    async fn test_vm_migrate_sends_correct_params() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("POST"))
+            .and(body_string_contains("one.vm.migrate"))
+            // Check VM ID is in the request
+            .and(body_string_contains("<int>42</int>"))
+            // Check host ID is in the request
+            .and(body_string_contains("<int>7</int>"))
+            // Check live=true
+            .and(body_string_contains("<boolean>1</boolean>"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(xmlrpc_success_int(42)))
+            .mount(&mock_server)
+            .await;
+
+        let client = OneClient::for_testing(&mock_server.uri());
+        let result = client.vm_migrate(42, 7, true, false, -1).await;
+
+        assert!(result.is_ok(), "Should match all param matchers");
+    }
+
+    #[tokio::test]
+    async fn test_list_hosts_single_host() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("POST"))
+            .and(body_string_contains("one.hostpool.info"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(xmlrpc_success_response(
+                r#"<HOST_POOL><HOST><ID>0</ID><NAME>solo-node</NAME><CLUSTER>default</CLUSTER></HOST></HOST_POOL>"#,
+            )))
+            .mount(&mock_server)
+            .await;
+
+        let client = OneClient::for_testing(&mock_server.uri());
+        let result = client.list_hosts().await.expect("Should succeed");
+
+        // Single host: OpenNebula may return object instead of array
+        let host_pool = result.pointer("/HOST_POOL/HOST").expect("Should have HOST");
+        if let Some(arr) = host_pool.as_array() {
+            assert_eq!(arr.len(), 1);
+            assert_eq!(arr[0]["NAME"], "solo-node");
+        } else {
+            // Single object case
+            assert_eq!(host_pool["NAME"], "solo-node");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_full_migration_flow_simulation() {
+        let mock_server = MockServer::start().await;
+
+        // Step 1: list hosts
+        Mock::given(method("POST"))
+            .and(body_string_contains("one.hostpool.info"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(xmlrpc_success_response(
+                r#"<HOST_POOL><HOST><ID>1</ID><NAME>target-host</NAME><CLUSTER>prod</CLUSTER><HOST_SHARE><RUNNING_VMS>2</RUNNING_VMS></HOST_SHARE></HOST><HOST><ID>2</ID><NAME>other-host</NAME><CLUSTER>prod</CLUSTER><HOST_SHARE><RUNNING_VMS>8</RUNNING_VMS></HOST_SHARE></HOST></HOST_POOL>"#,
+            )))
+            .mount(&mock_server)
+            .await;
+
+        // Step 2: migrate VM
+        Mock::given(method("POST"))
+            .and(body_string_contains("one.vm.migrate"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(xmlrpc_success_int(100)))
+            .mount(&mock_server)
+            .await;
+
+        let client = OneClient::for_testing(&mock_server.uri());
+
+        // Simulate: user lists hosts to pick a target
+        let hosts_data = client.list_hosts().await.expect("list_hosts should work");
+        let hosts = hosts_data
+            .pointer("/HOST_POOL/HOST")
+            .and_then(|v| v.as_array())
+            .expect("Should have hosts");
+        assert_eq!(hosts.len(), 2);
+
+        // Simulate: user picks host ID 1 ("target-host")
+        let target_host_id = hosts[0]["ID"].as_str().unwrap().parse::<i32>().unwrap();
+        assert_eq!(target_host_id, 1);
+
+        // Simulate: execute migration of VM 100 to host 1
+        let migrate_result = client
+            .vm_migrate(100, target_host_id, true, false, -1)
+            .await
+            .expect("migrate should succeed");
+        assert_eq!(migrate_result, serde_json::json!(100));
     }
 }
 
