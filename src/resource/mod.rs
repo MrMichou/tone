@@ -196,3 +196,45 @@ pub fn format_datastore_state(state: i32) -> String {
         _ => format!("UNKNOWN({})", state),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_extract_host_fields_for_migration_dialog() {
+        let host = json!({
+            "ID": "7",
+            "NAME": "node-1",
+            "CLUSTER": "default",
+            "HOST_SHARE": {
+                "RUNNING_VMS": "3",
+                "CPU_USAGE": "400",
+                "MEM_USAGE": "8192"
+            }
+        });
+
+        assert_eq!(extract_json_value(&host, "ID"), "7");
+        assert_eq!(extract_json_value(&host, "NAME"), "node-1");
+        assert_eq!(extract_json_value(&host, "CLUSTER"), "default");
+        assert_eq!(extract_json_value(&host, "HOST_SHARE.RUNNING_VMS"), "3");
+    }
+
+    #[test]
+    fn test_extract_missing_host_field() {
+        let host = json!({"ID": "7", "NAME": "node-1"});
+        assert_eq!(extract_json_value(&host, "CLUSTER"), "-");
+        assert_eq!(extract_json_value(&host, "HOST_SHARE.RUNNING_VMS"), "-");
+    }
+
+    #[test]
+    fn test_lcm_migrate_states() {
+        assert_eq!(format_lcm_state(4), "MIGRATE");
+        assert_eq!(format_lcm_state(7), "SAVE_MIGRATE");
+        assert_eq!(format_lcm_state(8), "PROLOG_MIGRATE");
+        assert_eq!(format_lcm_state(34), "BOOT_MIGRATE");
+        assert_eq!(format_lcm_state(36), "BOOT_MIGRATE_FAILURE");
+        assert_eq!(format_lcm_state(37), "PROLOG_MIGRATE_FAILURE");
+    }
+}

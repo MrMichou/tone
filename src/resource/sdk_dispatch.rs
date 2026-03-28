@@ -138,7 +138,8 @@ async fn invoke_vm(method: &str, client: &OneClient, params: &Value) -> Result<V
             let host_id = params
                 .get("host_id")
                 .and_then(|v| v.as_i64())
-                .ok_or_else(|| anyhow::anyhow!("Missing target host id"))? as i32;
+                .ok_or_else(|| anyhow::anyhow!("Missing target host id"))?
+                as i32;
             client.vm_migrate(id, host_id, true, false, -1).await
         }
         _ => Err(anyhow::anyhow!("Unknown VM method: {}", method)),

@@ -157,10 +157,7 @@ fn render_host_select(f: &mut Frame, app: &App) {
         return;
     }
 
-    let vm_name = app
-        .migrate_vm_name
-        .as_deref()
-        .unwrap_or("?");
+    let vm_name = app.migrate_vm_name.as_deref().unwrap_or("?");
 
     // Calculate height: header + hosts (max 12) + hint
     let visible_hosts = app.host_list.len().min(12);
@@ -187,20 +184,18 @@ fn render_host_select(f: &mut Frame, app: &App) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(1), // Column headers
-            Constraint::Min(1),   // Host list
+            Constraint::Min(1),    // Host list
             Constraint::Length(1), // Hint
         ])
         .split(inner);
 
     // Column headers
-    let header = Line::from(vec![
-        Span::styled(
-            format!("{:<6} {:<25} {:<12} {:>6}", "ID", "NAME", "CLUSTER", "VMS"),
-            Style::default()
-                .fg(Color::DarkGray)
-                .add_modifier(Modifier::BOLD),
-        ),
-    ]);
+    let header = Line::from(vec![Span::styled(
+        format!("{:<6} {:<25} {:<12} {:>6}", "ID", "NAME", "CLUSTER", "VMS"),
+        Style::default()
+            .fg(Color::DarkGray)
+            .add_modifier(Modifier::BOLD),
+    )]);
     f.render_widget(Paragraph::new(header), chunks[0]);
 
     // Scrolling offset

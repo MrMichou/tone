@@ -314,8 +314,7 @@ async fn handle_host_select_mode(app: &mut App, code: KeyCode) -> Result<bool> {
         }
         KeyCode::Char('j') | KeyCode::Down => {
             if !app.host_list.is_empty() {
-                app.host_select_index =
-                    (app.host_select_index + 1).min(app.host_list.len() - 1);
+                app.host_select_index = (app.host_select_index + 1).min(app.host_list.len() - 1);
             }
         }
         KeyCode::Char('k') | KeyCode::Up => {

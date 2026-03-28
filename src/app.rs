@@ -502,17 +502,15 @@ impl App {
         .await
         {
             Ok(data) => {
-                let hosts = if let Some(arr) = data
-                    .pointer("/HOST_POOL/HOST")
-                    .and_then(|v| v.as_array())
-                {
-                    arr.clone()
-                } else if let Some(obj) = data.pointer("/HOST_POOL/HOST") {
-                    // Single host case: OpenNebula returns an object instead of array
-                    vec![obj.clone()]
-                } else {
-                    Vec::new()
-                };
+                let hosts =
+                    if let Some(arr) = data.pointer("/HOST_POOL/HOST").and_then(|v| v.as_array()) {
+                        arr.clone()
+                    } else if let Some(obj) = data.pointer("/HOST_POOL/HOST") {
+                        // Single host case: OpenNebula returns an object instead of array
+                        vec![obj.clone()]
+                    } else {
+                        Vec::new()
+                    };
 
                 if hosts.is_empty() {
                     self.show_warning("No hosts available for migration");
@@ -696,5 +694,39 @@ impl App {
         }
 
         Ok(false)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pending_action_for_migration() {
+        let pending = PendingAction {
+            service: "vm".to_string(),
+            sdk_method: "migrate".to_string(),
+            resource_id: "42".to_string(),
+            message: "Live migrate VM 'web-server' to host 'node-1' (ID 7)?".to_string(),
+            default_no: true,
+            destructive: false,
+            selected_yes: false,
+        };
+
+        assert_eq!(pending.service, "vm");
+        assert_eq!(pending.sdk_method, "migrate");
+        assert_eq!(pending.resource_id, "42");
+        assert!(!pending.destructive);
+        assert!(!pending.selected_yes);
+        assert!(pending.message.contains("web-server"));
+        assert!(pending.message.contains("node-1"));
+    }
+
+    #[test]
+    fn test_host_select_mode_variant() {
+        let mode = Mode::HostSelect;
+        assert_eq!(mode, Mode::HostSelect);
+        assert_ne!(mode, Mode::Normal);
+        assert_ne!(mode, Mode::Confirm);
     }
 }
