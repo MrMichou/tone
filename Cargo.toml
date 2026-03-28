@@ -48,5 +48,16 @@ chrono = { version = "0.4", default-features = false, features = ["std", "clock"
 # Security
 zeroize = { version = "1.8", features = ["derive"] }
 
+[package.metadata.deb]
+maintainer = "mnicolet"
+copyright = "2025, mnicolet"
+extended-description = "Terminal UI for OpenNebula - navigate, observe, and manage OpenNebula cloud resources from your terminal."
+section = "utils"
+priority = "optional"
+assets = [
+    ["target/release/tone", "usr/bin/", "755"],
+    ["README.md", "usr/share/doc/tone/", "644"],
+]
+
 [dev-dependencies]
 dirs = "6.0"

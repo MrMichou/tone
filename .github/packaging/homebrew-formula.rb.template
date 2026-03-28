@@ -1,0 +1,36 @@
+class Tone < Formula
+  desc "Terminal UI for OpenNebula"
+  homepage "https://github.com/MrMichou/tone"
+  version "@@VERSION@@"
+  license "MIT"
+
+  on_macos do
+    on_arm do
+      url "https://github.com/MrMichou/tone/releases/download/v@@VERSION@@/tone-aarch64-apple-darwin.tar.gz"
+      sha256 "@@SHA256_MACOS_ARM64@@"
+    end
+    on_intel do
+      url "https://github.com/MrMichou/tone/releases/download/v@@VERSION@@/tone-x86_64-apple-darwin.tar.gz"
+      sha256 "@@SHA256_MACOS_X86_64@@"
+    end
+  end
+
+  on_linux do
+    on_arm do
+      url "https://github.com/MrMichou/tone/releases/download/v@@VERSION@@/tone-aarch64-unknown-linux-gnu.tar.gz"
+      sha256 "@@SHA256_LINUX_ARM64@@"
+    end
+    on_intel do
+      url "https://github.com/MrMichou/tone/releases/download/v@@VERSION@@/tone-x86_64-unknown-linux-gnu.tar.gz"
+      sha256 "@@SHA256_LINUX_X86_64@@"
+    end
+  end
+
+  def install
+    bin.install "tone"
+  end
+
+  test do
+    assert_match "tone", shell_output("#{bin}/tone --version")
+  end
+end

@@ -5,12 +5,25 @@ on:
     tags:
       - "v*"
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
+  # Run full CI suite before any release build
+  ci:
+    name: CI Checks
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
   version-check:
     name: Verify Version Match
+    needs: [ci]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -18,27 +31,21 @@ jobs:
 
       - name: Check version match
         run: |
-          # Get version from tag (remove 'v' prefix)
           TAG_VERSION=${GITHUB_REF#refs/tags/v}
-
-          # Get version from Cargo.toml
           CARGO_VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
 
           echo "Tag version: $TAG_VERSION"
           echo "Cargo.toml version: $CARGO_VERSION"
 
           if [ "$TAG_VERSION" != "$CARGO_VERSION" ]; then
-            echo "❌ Version mismatch!"
-            echo "Tag version ($TAG_VERSION) does not match Cargo.toml version ($CARGO_VERSION)"
-            echo ""
-            echo "Please update Cargo.toml version to $TAG_VERSION before creating the release tag."
+            echo "::error::Version mismatch! Tag ($TAG_VERSION) != Cargo.toml ($CARGO_VERSION)"
             exit 1
           fi
 
-          echo "✅ Versions match!"
+          echo "Versions match."
 
   build-linux:
-    needs: version-check
+    needs: [version-check]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -53,6 +60,17 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+
+      - name: Cache cargo
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install cross-compilation tools
         if: matrix.target == 'aarch64-unknown-linux-gnu'
@@ -71,14 +89,19 @@ jobs:
           cd target/${{ matrix.target }}/release
           tar -czf ../../../tone-${{ matrix.target }}.tar.gz tone
 
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: tone-${{ matrix.target }}.tar.gz
+
       - name: Upload artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: tone-${{ matrix.target }}
           path: tone-${{ matrix.target }}.tar.gz
 
   build-macos:
-    needs: version-check
+    needs: [version-check]
     runs-on: macos-latest
     strategy:
       matrix:
@@ -94,6 +117,17 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Cache cargo
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
         env:
@@ -104,14 +138,19 @@ jobs:
           cd target/${{ matrix.target }}/release
           tar -czf ../../../tone-${{ matrix.target }}.tar.gz tone
 
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: tone-${{ matrix.target }}.tar.gz
+
       - name: Upload artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: tone-${{ matrix.target }}
           path: tone-${{ matrix.target }}.tar.gz
 
   build-windows:
-    needs: version-check
+    needs: [version-check]
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -121,6 +160,17 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc
+
+      - name: Cache cargo
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-x86_64-pc-windows-msvc-cargo-release-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build
         run: cargo build --release --target x86_64-pc-windows-msvc
@@ -132,21 +182,71 @@ jobs:
           cd target/x86_64-pc-windows-msvc/release
           7z a ../../../tone-x86_64-pc-windows-msvc.zip tone.exe
 
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: tone-x86_64-pc-windows-msvc.zip
+
       - name: Upload artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: tone-x86_64-pc-windows-msvc
           path: tone-x86_64-pc-windows-msvc.zip
 
+  package-deb:
+    needs: [version-check]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-x86_64-cargo-deb-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install cargo-deb
+        run: cargo install cargo-deb --locked
+
+      - name: Build .deb package
+        run: cargo deb
+        env:
+          TONE_VERSION: ${{ github.ref_name }}
+
+      - name: Rename .deb for consistency
+        run: |
+          DEB_FILE=$(find target/debian -name '*.deb' | head -1)
+          cp "$DEB_FILE" tone_amd64.deb
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: tone_amd64.deb
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tone-deb
+          path: tone_amd64.deb
+
   release:
-    needs: [build-linux, build-macos, build-windows]
+    needs: [build-linux, build-macos, build-windows, package-deb]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           pattern: tone-*
           merge-multiple: true
@@ -154,10 +254,96 @@ jobs:
       - name: Generate checksums
         run: sha256sum tone-* > checksums.txt
 
-      - name: Create Release
+      - name: Generate Scoop manifest
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          SHA_WIN=$(grep "tone-x86_64-pc-windows-msvc.zip" checksums.txt | cut -d' ' -f1)
+          sed -e "s/@@VERSION@@/$VERSION/g" \
+              -e "s/@@SHA256_WINDOWS_X86_64@@/$SHA_WIN/g" \
+              .github/packaging/scoop-manifest.json.template > tone.json
+
+      - name: Create draft release
         uses: softprops/action-gh-release@v2
         with:
+          draft: true
+          body: |
+            ## Install
+
+            **Homebrew (macOS/Linux):**
+            ```
+            brew install MrMichou/tap/tone
+            ```
+
+            **Shell installer:**
+            ```
+            curl -fsSL https://raw.githubusercontent.com/MrMichou/tone/master/install.sh | sh
+            ```
+
+            **Debian/Ubuntu (.deb):**
+            ```
+            # Download tone_amd64.deb from assets below, then:
+            sudo dpkg -i tone_amd64.deb
+            ```
+
+            **Scoop (Windows):**
+            ```
+            scoop install https://github.com/MrMichou/tone/releases/download/${{ github.ref_name }}/tone.json
+            ```
+
+            ---
+
+          generate_release_notes: true
           files: |
             tone-*
             checksums.txt
-          generate_release_notes: true
+            tone.json
+
+  publish-release:
+    needs: [release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit ${{ github.ref_name }} --repo ${{ github.repository }} --draft=false
+
+  update-homebrew:
+    needs: [publish-release]
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.ref_name, '-') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: tone-*
+          merge-multiple: true
+
+      - name: Generate Homebrew formula
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          SHA_LINUX_X86=$(sha256sum tone-x86_64-unknown-linux-gnu.tar.gz | cut -d' ' -f1)
+          SHA_LINUX_ARM=$(sha256sum tone-aarch64-unknown-linux-gnu.tar.gz | cut -d' ' -f1)
+          SHA_MACOS_X86=$(sha256sum tone-x86_64-apple-darwin.tar.gz | cut -d' ' -f1)
+          SHA_MACOS_ARM=$(sha256sum tone-aarch64-apple-darwin.tar.gz | cut -d' ' -f1)
+
+          sed -e "s/@@VERSION@@/$VERSION/g" \
+              -e "s/@@SHA256_LINUX_X86_64@@/$SHA_LINUX_X86/g" \
+              -e "s/@@SHA256_LINUX_ARM64@@/$SHA_LINUX_ARM/g" \
+              -e "s/@@SHA256_MACOS_X86_64@@/$SHA_MACOS_X86/g" \
+              -e "s/@@SHA256_MACOS_ARM64@@/$SHA_MACOS_ARM/g" \
+              .github/packaging/homebrew-formula.rb.template > tone.rb
+
+      - name: Push to homebrew-tap
+        uses: dmnemec/copy_file_to_another_repo_action@main
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        with:
+          source_file: "tone.rb"
+          destination_repo: "MrMichou/homebrew-tap"
+          destination_folder: "Formula"
+          user_email: "github-actions[bot]@users.noreply.github.com"
+          user_name: "github-actions[bot]"
+          commit_message: "Update tone to ${{ github.ref_name }}"
