@@ -215,7 +215,7 @@ jobs:
           key: ${{ runner.os }}-x86_64-cargo-deb-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install cargo-deb
-        run: cargo install cargo-deb --locked
+        run: cargo install cargo-deb --locked --force
 
       - name: Build .deb package
         run: cargo deb
