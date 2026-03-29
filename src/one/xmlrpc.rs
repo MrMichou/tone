@@ -374,6 +374,9 @@ pub fn xmlrpc_to_json(value: &XmlRpcValue) -> Value {
     }
 }
 
+/// Maximum XML nesting depth to prevent stack overflow from malicious input
+const MAX_XML_DEPTH: usize = 128;
+
 /// Parse OpenNebula's XML data format to JSON
 /// OpenNebula returns XML data as a string in XML-RPC responses
 pub fn parse_one_xml_to_json(xml: &str) -> Result<Value> {
@@ -382,10 +385,17 @@ pub fn parse_one_xml_to_json(xml: &str) -> Result<Value> {
     let mut reader = Reader::from_str(xml);
     reader.config_mut().trim_text(true);
 
-    parse_xml_element(&mut reader)
+    parse_xml_element(&mut reader, 0)
 }
 
-fn parse_xml_element(reader: &mut quick_xml::Reader<&[u8]>) -> Result<Value> {
+fn parse_xml_element(reader: &mut quick_xml::Reader<&[u8]>, depth: usize) -> Result<Value> {
+    if depth > MAX_XML_DEPTH {
+        return Err(anyhow::anyhow!(
+            "XML nesting depth exceeds maximum ({})",
+            MAX_XML_DEPTH
+        ));
+    }
+
     let mut buf = Vec::new();
     let mut result: Map<String, Value> = Map::new();
     let mut text_content = String::new();
@@ -396,7 +406,7 @@ fn parse_xml_element(reader: &mut quick_xml::Reader<&[u8]>) -> Result<Value> {
                 let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
 
                 // Parse nested element recursively
-                let nested = parse_xml_element(reader)?;
+                let nested = parse_xml_element(reader, depth + 1)?;
 
                 // Handle arrays (multiple elements with same name)
                 if let Some(existing) = result.get_mut(&tag) {

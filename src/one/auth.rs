@@ -87,8 +87,10 @@ impl OneCredentials {
     /// Warn if using insecure HTTP for remote endpoints
     fn warn_insecure_endpoint(endpoint: &str) {
         if endpoint.starts_with("http://") {
-            // Allow HTTP only for localhost/127.0.0.1
-            let is_localhost = endpoint.contains("localhost") || endpoint.contains("127.0.0.1");
+            // Allow HTTP only for loopback addresses
+            let is_localhost = endpoint.contains("localhost")
+                || endpoint.contains("127.0.0.1")
+                || endpoint.contains("[::1]");
             if !is_localhost {
                 tracing::warn!(
                     "Using insecure HTTP connection to remote host. \
@@ -134,6 +136,9 @@ impl OneCredentials {
     }
 
     /// Validate that credential file has secure permissions (Unix only)
+    ///
+    /// Returns an error if the file is readable by others (world-readable),
+    /// and warns if readable by group.
     #[cfg(unix)]
     fn validate_file_permissions(path: &PathBuf) -> Result<()> {
         use std::os::unix::fs::PermissionsExt;
@@ -141,10 +146,21 @@ impl OneCredentials {
         let metadata = std::fs::metadata(path).context("Failed to read file metadata")?;
         let mode = metadata.permissions().mode();
 
-        // Check if file is readable by group or others (bits 0o077)
-        if mode & 0o077 != 0 {
+        // Reject if world-readable (others can read)
+        if mode & 0o007 != 0 {
+            return Err(anyhow::anyhow!(
+                "Credential file {:?} is world-readable (mode {:o}). \
+                 Fix with: chmod 600 {:?}",
+                path,
+                mode & 0o777,
+                path
+            ));
+        }
+
+        // Warn if group-readable
+        if mode & 0o070 != 0 {
             tracing::warn!(
-                "Credential file {:?} has insecure permissions {:o}. \
+                "Credential file {:?} is group-readable (mode {:o}). \
                  Recommended: chmod 600 {:?}",
                 path,
                 mode & 0o777,
@@ -186,8 +202,8 @@ impl OneCredentials {
     }
 
     /// Get the auth string for XML-RPC calls
-    /// Note: The returned string contains sensitive data and should be
-    /// zeroized after use if stored in a variable
+    ///
+    /// The caller is responsible for zeroizing the returned string after use.
     pub fn auth_string(&self) -> String {
         format!("{}:{}", self.username, self.password)
     }

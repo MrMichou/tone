@@ -15,6 +15,7 @@ use anyhow::{Context, Result};
 use reqwest::Client;
 use serde_json::Value;
 use std::time::Duration;
+use zeroize::Zeroize;
 
 /// Default timeout for HTTP requests (30 seconds)
 const DEFAULT_TIMEOUT_SECS: u64 = 30;
@@ -79,13 +80,20 @@ impl OneClient {
         self.credentials.username()
     }
 
+    /// Maximum response body size (10 MB) to prevent OOM from malicious servers
+    const MAX_RESPONSE_SIZE: usize = 10 * 1024 * 1024;
+
     /// Make an XML-RPC call to OpenNebula
     pub async fn call(&self, method: &str, params: Vec<XmlRpcValue>) -> Result<Value> {
         // Prepend auth string to params
-        let mut full_params = vec![XmlRpcValue::String(self.credentials.auth_string())];
+        let mut auth_string = self.credentials.auth_string();
+        let mut full_params = vec![XmlRpcValue::String(auth_string.clone())];
+        auth_string.zeroize();
         full_params.extend(params);
 
-        let xml_request = build_method_call(method, &full_params)?;
+        let mut xml_request = build_method_call(method, &full_params)?;
+        // Drop full_params early to zeroize the auth copy inside XmlRpcValue
+        drop(full_params);
 
         tracing::debug!(
             "XML-RPC call: {} to {}",
@@ -102,16 +110,39 @@ impl OneClient {
             .http
             .post(self.credentials.endpoint())
             .header("Content-Type", "text/xml")
-            .body(xml_request)
+            .body(xml_request.clone())
             .send()
-            .await
-            .context("Failed to send XML-RPC request")?;
+            .await;
+
+        // Zeroize the request XML as it contains credentials
+        xml_request.zeroize();
+
+        let response = response.context("Failed to send XML-RPC request")?;
 
         let status = response.status();
+
+        // SECURITY: Enforce response size limit to prevent OOM from malicious servers
+        let content_length = response.content_length().unwrap_or(0) as usize;
+        if content_length > Self::MAX_RESPONSE_SIZE {
+            return Err(anyhow::anyhow!(
+                "Response too large ({} bytes, max {})",
+                content_length,
+                Self::MAX_RESPONSE_SIZE
+            ));
+        }
+
         let body = response
             .text()
             .await
             .context("Failed to read response body")?;
+
+        if body.len() > Self::MAX_RESPONSE_SIZE {
+            return Err(anyhow::anyhow!(
+                "Response body too large ({} bytes, max {})",
+                body.len(),
+                Self::MAX_RESPONSE_SIZE
+            ));
+        }
 
         if !status.is_success() {
             // SECURITY: Don't log full response body as it may contain sensitive data
