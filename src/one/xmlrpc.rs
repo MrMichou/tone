@@ -9,6 +9,18 @@ use quick_xml::Writer;
 use serde_json::{Map, Value};
 use std::io::Cursor;
 
+/// Resolve a general entity reference name to its character
+fn resolve_entity(name: &str) -> &str {
+    match name {
+        "lt" => "<",
+        "gt" => ">",
+        "amp" => "&",
+        "apos" => "'",
+        "quot" => "\"",
+        _ => "",
+    }
+}
+
 /// Build an XML-RPC method call
 pub fn build_method_call(method: &str, params: &[XmlRpcValue]) -> Result<String> {
     let mut writer = Writer::new(Cursor::new(Vec::new()));
@@ -309,11 +321,20 @@ fn parse_value_content(reader: &mut quick_xml::Reader<&[u8]>) -> Result<XmlRpcVa
                 }
             }
             Ok(Event::Text(e)) => {
-                let text = e.unescape().unwrap_or_default().to_string();
+                let text = e.decode().unwrap_or_default().to_string();
                 if in_name {
                     member_name = text;
                 } else {
                     text_content.push_str(&text);
+                }
+            }
+            Ok(Event::GeneralRef(e)) => {
+                let name = e.decode().unwrap_or_default();
+                let resolved = resolve_entity(&name);
+                if in_name {
+                    member_name.push_str(resolved);
+                } else {
+                    text_content.push_str(resolved);
                 }
             }
             Ok(Event::Eof) => break,
@@ -398,7 +419,10 @@ fn parse_xml_element(reader: &mut quick_xml::Reader<&[u8]>) -> Result<Value> {
                 return Ok(Value::Object(result));
             }
             Ok(Event::Text(e)) => {
-                text_content.push_str(&e.unescape().unwrap_or_default());
+                text_content.push_str(&e.decode().unwrap_or_default());
+            }
+            Ok(Event::GeneralRef(e)) => {
+                text_content.push_str(resolve_entity(&e.decode().unwrap_or_default()));
             }
             Ok(Event::Empty(ref e)) => {
                 let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
