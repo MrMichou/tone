@@ -212,6 +212,14 @@ impl App {
             self.items = match self.current_resource_key.as_str() {
                 "one-vms" => crate::demo::demo_vms(),
                 "one-hosts" => crate::demo::demo_hosts(),
+                "one-templates" => crate::demo::demo_templates(),
+                "one-datastores" => crate::demo::demo_datastores(),
+                "one-images" => crate::demo::demo_images(),
+                "one-vnets" => crate::demo::demo_vnets(),
+                "one-clusters" => crate::demo::demo_clusters(),
+                "one-users" => crate::demo::demo_users(),
+                "one-groups" => crate::demo::demo_groups(),
+                "one-zones" => crate::demo::demo_zones(),
                 _ => {
                     self.error_message =
                         Some(format!("Demo: no data for {}", self.current_resource_key));
