@@ -90,7 +90,7 @@ jobs:
           tar -czf ../../../tone-${{ matrix.target }}.tar.gz tone
 
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: tone-${{ matrix.target }}.tar.gz
 
@@ -139,7 +139,7 @@ jobs:
           tar -czf ../../../tone-${{ matrix.target }}.tar.gz tone
 
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: tone-${{ matrix.target }}.tar.gz
 
@@ -183,7 +183,7 @@ jobs:
           7z a ../../../tone-x86_64-pc-windows-msvc.zip tone.exe
 
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: tone-x86_64-pc-windows-msvc.zip
 
@@ -228,7 +228,7 @@ jobs:
           cp "$DEB_FILE" tone-amd64.deb
 
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: tone-amd64.deb
 
