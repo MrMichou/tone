@@ -248,4 +248,82 @@ mod tests {
         assert!(!config.destructive);
         assert_eq!(config.message, Some("Live migrate VM".to_string()));
     }
+
+    #[test]
+    fn test_get_color_for_value_known() {
+        // "vm_state" should exist in common.json
+        let color = get_color_for_value("vm_state", "ACTIVE");
+        assert!(color.is_some(), "ACTIVE should have a color in vm_state");
+    }
+
+    #[test]
+    fn test_get_color_for_value_unknown() {
+        let color = get_color_for_value("vm_state_colors", "NONEXISTENT_STATE");
+        assert!(color.is_none());
+    }
+
+    #[test]
+    fn test_get_color_map_nonexistent() {
+        let map = get_color_map("totally_fake_map");
+        assert!(map.is_none());
+    }
+
+    #[test]
+    fn test_host_resource_exists() {
+        let resource = get_resource("one-hosts");
+        assert!(resource.is_some(), "Host resource should exist");
+        let resource = resource.unwrap();
+        assert_eq!(resource.service, "host");
+        assert!(!resource.columns.is_empty());
+    }
+
+    #[test]
+    fn test_resource_filter_new() {
+        let filter = ResourceFilter::new("state", vec!["ACTIVE".to_string(), "RUNNING".to_string()]);
+        assert_eq!(filter.name, "state");
+        assert_eq!(filter.values.len(), 2);
+        assert_eq!(filter.values[0], "ACTIVE");
+    }
+
+    #[test]
+    fn test_action_get_confirm_config_needs_confirm_no_explicit() {
+        let action = ActionDef {
+            key: "test".to_string(),
+            display_name: "Test Action".to_string(),
+            shortcut: None,
+            sdk_method: "test".to_string(),
+            id_param: None,
+            needs_confirm: true,
+            confirm: None,
+        };
+        let config = action.get_confirm_config().expect("Should have config");
+        assert_eq!(config.message, Some("Test Action".to_string()));
+        assert!(!config.default_yes);
+        assert!(!config.destructive);
+    }
+
+    #[test]
+    fn test_action_get_confirm_config_no_confirm() {
+        let action = ActionDef {
+            key: "test".to_string(),
+            display_name: "Test".to_string(),
+            shortcut: None,
+            sdk_method: "test".to_string(),
+            id_param: None,
+            needs_confirm: false,
+            confirm: None,
+        };
+        assert!(action.get_confirm_config().is_none());
+    }
+
+    #[test]
+    fn test_vm_resource_columns() {
+        let resource = get_resource("one-vms").unwrap();
+        assert!(
+            !resource.columns.is_empty(),
+            "VMs should have columns defined"
+        );
+        // Verify ID column exists
+        assert!(resource.columns.iter().any(|c| c.header == "ID"));
+    }
 }

@@ -602,6 +602,82 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_get_vm_returns_vm_info() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("POST"))
+            .and(body_string_contains("one.vm.info"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(xmlrpc_success_response(
+                r#"<VM><ID>100</ID><NAME>web-server</NAME><STATE>3</STATE><LCM_STATE>3</LCM_STATE></VM>"#,
+            )))
+            .mount(&mock_server)
+            .await;
+
+        let client = OneClient::for_testing(&mock_server.uri());
+        let result = client.get_vm(100).await.expect("get_vm should succeed");
+        assert_eq!(result["VM"]["ID"], "100");
+        assert_eq!(result["VM"]["NAME"], "web-server");
+    }
+
+    #[tokio::test]
+    async fn test_vm_action_resume() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("POST"))
+            .and(body_string_contains("one.vm.action"))
+            .and(body_string_contains("resume"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(xmlrpc_success_int(100)))
+            .mount(&mock_server)
+            .await;
+
+        let client = OneClient::for_testing(&mock_server.uri());
+        let result = client
+            .vm_action("resume", 100)
+            .await
+            .expect("vm_action should succeed");
+        assert_eq!(result, serde_json::json!(100));
+    }
+
+    #[tokio::test]
+    async fn test_list_vms_returns_pool() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("POST"))
+            .and(body_string_contains("one.vmpool.info"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(xmlrpc_success_response(
+                r#"<VM_POOL><VM><ID>1</ID><NAME>vm1</NAME></VM><VM><ID>2</ID><NAME>vm2</NAME></VM></VM_POOL>"#,
+            )))
+            .mount(&mock_server)
+            .await;
+
+        let client = OneClient::for_testing(&mock_server.uri());
+        let result = client
+            .list_vms(-2, -1, -1, -1)
+            .await
+            .expect("list_vms should succeed");
+        let vms = result
+            .pointer("/VM_POOL/VM")
+            .and_then(|v| v.as_array())
+            .expect("Should have VM array");
+        assert_eq!(vms.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_http_error_returns_err() {
+        let mock_server = MockServer::start().await;
+
+        Mock::given(method("POST"))
+            .respond_with(ResponseTemplate::new(500).set_body_string("Internal Server Error"))
+            .mount(&mock_server)
+            .await;
+
+        let client = OneClient::for_testing(&mock_server.uri());
+        let result = client.list_hosts().await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("500"));
+    }
+
+    #[tokio::test]
     async fn test_full_migration_flow_simulation() {
         let mock_server = MockServer::start().await;
 
@@ -641,6 +717,74 @@ mod tests {
             .await
             .expect("migrate should succeed");
         assert_eq!(migrate_result, serde_json::json!(100));
+    }
+}
+
+#[cfg(test)]
+mod format_error_tests {
+    use super::*;
+
+    #[test]
+    fn test_format_one_error_auth() {
+        let err = anyhow::anyhow!("HTTP 401 Authentication failed");
+        assert_eq!(
+            format_one_error(&err),
+            "Authentication failed. Check ONE_AUTH credentials."
+        );
+    }
+
+    #[test]
+    fn test_format_one_error_connection_refused() {
+        let err = anyhow::anyhow!("Connection refused");
+        assert_eq!(
+            format_one_error(&err),
+            "Connection refused. Check ONE_XMLRPC endpoint."
+        );
+    }
+
+    #[test]
+    fn test_format_one_error_timeout() {
+        let err = anyhow::anyhow!("request timed out");
+        assert_eq!(
+            format_one_error(&err),
+            "Request timed out. Server may be unreachable."
+        );
+    }
+
+    #[test]
+    fn test_format_one_error_tls() {
+        let err = anyhow::anyhow!("SSL certificate problem");
+        assert_eq!(
+            format_one_error(&err),
+            "TLS/SSL error. Check certificate configuration."
+        );
+    }
+
+    #[test]
+    fn test_format_one_error_api_error() {
+        let err = anyhow::anyhow!("OpenNebula API error: VM not found");
+        assert_eq!(
+            format_one_error(&err),
+            "OpenNebula API error: VM not found"
+        );
+    }
+
+    #[test]
+    fn test_format_one_error_api_error_truncation() {
+        let long_msg = format!("OpenNebula API error: {}", "x".repeat(200));
+        let err = anyhow::anyhow!("{}", long_msg);
+        let result = format_one_error(&err);
+        assert!(result.len() <= 104); // 100 + "..."
+        assert!(result.ends_with("..."));
+    }
+
+    #[test]
+    fn test_format_one_error_generic() {
+        let err = anyhow::anyhow!("some random internal error");
+        assert_eq!(
+            format_one_error(&err),
+            "An error occurred. Check logs for details."
+        );
     }
 }
 

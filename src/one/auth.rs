@@ -240,4 +240,34 @@ mod tests {
         assert!(debug_output.contains("[REDACTED]"));
         assert!(debug_output.contains("testuser"));
     }
+
+    #[test]
+    fn test_parse_auth_string_invalid_no_colon() {
+        let result = OneCredentials::parse_auth_string("nocolonhere");
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Invalid auth format"));
+    }
+
+    #[test]
+    fn test_parse_auth_string_empty() {
+        let result = OneCredentials::parse_auth_string("");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_auth_string_format() {
+        let creds = OneCredentials::for_testing("admin", "secret123", "https://localhost:2633/RPC2");
+        assert_eq!(creds.auth_string(), "admin:secret123");
+    }
+
+    #[test]
+    fn test_for_testing_fields() {
+        let creds = OneCredentials::for_testing("user1", "pass1", "http://example.com/RPC2");
+        assert_eq!(creds.username(), "user1");
+        assert_eq!(creds.endpoint(), "http://example.com/RPC2");
+        assert_eq!(creds.auth_string(), "user1:pass1");
+    }
 }

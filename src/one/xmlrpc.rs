@@ -475,4 +475,149 @@ mod tests {
         assert_eq!(json["VM"]["ID"], "123");
         assert_eq!(json["VM"]["NAME"], "test-vm");
     }
+
+    #[test]
+    fn test_resolve_entity_all() {
+        assert_eq!(resolve_entity("lt"), "<");
+        assert_eq!(resolve_entity("gt"), ">");
+        assert_eq!(resolve_entity("amp"), "&");
+        assert_eq!(resolve_entity("apos"), "'");
+        assert_eq!(resolve_entity("quot"), "\"");
+        assert_eq!(resolve_entity("unknown"), "");
+    }
+
+    #[test]
+    fn test_xmlrpc_to_json_all_types() {
+        assert_eq!(
+            xmlrpc_to_json(&XmlRpcValue::String("hello".into())),
+            serde_json::json!("hello")
+        );
+        assert_eq!(
+            xmlrpc_to_json(&XmlRpcValue::Int(42)),
+            serde_json::json!(42)
+        );
+        assert_eq!(
+            xmlrpc_to_json(&XmlRpcValue::Boolean(true)),
+            serde_json::json!(true)
+        );
+        assert_eq!(
+            xmlrpc_to_json(&XmlRpcValue::Double(3.14)),
+            serde_json::json!(3.14)
+        );
+        assert_eq!(
+            xmlrpc_to_json(&XmlRpcValue::Array(vec![
+                XmlRpcValue::Int(1),
+                XmlRpcValue::String("two".into()),
+            ])),
+            serde_json::json!([1, "two"])
+        );
+        assert_eq!(
+            xmlrpc_to_json(&XmlRpcValue::Struct(vec![
+                ("key".into(), XmlRpcValue::String("val".into())),
+                ("num".into(), XmlRpcValue::Int(5)),
+            ])),
+            serde_json::json!({"key": "val", "num": 5})
+        );
+    }
+
+    #[test]
+    fn test_xmlrpc_to_json_double_nan() {
+        // NaN can't be represented in JSON
+        let result = xmlrpc_to_json(&XmlRpcValue::Double(f64::NAN));
+        assert_eq!(result, serde_json::Value::Null);
+    }
+
+    #[test]
+    fn test_build_method_call_with_boolean_and_double() {
+        let params = vec![
+            XmlRpcValue::Boolean(true),
+            XmlRpcValue::Double(1.5),
+        ];
+        let xml = build_method_call("test.method", &params).unwrap();
+        assert!(xml.contains("test.method"));
+        assert!(xml.contains("<boolean>1</boolean>"));
+        assert!(xml.contains("<double>1.5</double>"));
+    }
+
+    #[test]
+    fn test_build_method_call_with_array() {
+        let params = vec![XmlRpcValue::Array(vec![
+            XmlRpcValue::Int(1),
+            XmlRpcValue::Int(2),
+        ])];
+        let xml = build_method_call("test.array", &params).unwrap();
+        assert!(xml.contains("<array>"));
+        assert!(xml.contains("<data>"));
+        assert!(xml.contains("<int>1</int>"));
+        assert!(xml.contains("<int>2</int>"));
+    }
+
+    #[test]
+    fn test_build_method_call_with_struct() {
+        let params = vec![XmlRpcValue::Struct(vec![(
+            "name".into(),
+            XmlRpcValue::String("value".into()),
+        )])];
+        let xml = build_method_call("test.struct", &params).unwrap();
+        assert!(xml.contains("<struct>"));
+        assert!(xml.contains("<member>"));
+        assert!(xml.contains("<name>name</name>"));
+        assert!(xml.contains("<string>value</string>"));
+    }
+
+    #[test]
+    fn test_parse_response_fault() {
+        let xml = r#"<?xml version="1.0"?>
+<methodResponse><fault><value><struct>
+  <member><name>faultCode</name><value><int>4</int></value></member>
+  <member><name>faultString</name><value><string>Too many parameters.</string></value></member>
+</struct></value></fault></methodResponse>"#;
+        let result = parse_response(xml).unwrap();
+        assert!(matches!(result, XmlRpcResponse::Fault(_)));
+    }
+
+    #[test]
+    fn test_parse_response_invalid_xml() {
+        let result = parse_response("not xml at all {{{");
+        // Should return an error (no valid methodResponse found)
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_one_xml_nested_arrays() {
+        // Duplicate tags should produce an array
+        let xml = r#"<VM_POOL><VM><ID>1</ID></VM><VM><ID>2</ID></VM></VM_POOL>"#;
+        let json = parse_one_xml_to_json(xml).unwrap();
+        let vms = json["VM_POOL"]["VM"].as_array().expect("Should be array");
+        assert_eq!(vms.len(), 2);
+        assert_eq!(vms[0]["ID"], "1");
+        assert_eq!(vms[1]["ID"], "2");
+    }
+
+    #[test]
+    fn test_parse_one_xml_empty_element() {
+        let xml = r#"<HOST><ID>1</ID><TEMPLATE/></HOST>"#;
+        let json = parse_one_xml_to_json(xml).unwrap();
+        assert_eq!(json["HOST"]["ID"], "1");
+        assert!(json["HOST"]["TEMPLATE"].is_null());
+    }
+
+    #[test]
+    fn test_parse_response_success_with_int() {
+        let xml = r#"<?xml version="1.0"?>
+<methodResponse><params><param><value><array><data>
+  <value><boolean>1</boolean></value>
+  <value><int>42</int></value>
+  <value><int>0</int></value>
+</data></array></value></param></params></methodResponse>"#;
+        let result = parse_response(xml).unwrap();
+        match result {
+            XmlRpcResponse::Success(XmlRpcValue::Array(arr)) => {
+                assert_eq!(arr.len(), 3);
+                assert!(matches!(arr[0], XmlRpcValue::Boolean(true)));
+                assert!(matches!(arr[1], XmlRpcValue::Int(42)));
+            }
+            _ => panic!("Expected Success with Array"),
+        }
+    }
 }
