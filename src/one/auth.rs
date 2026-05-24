@@ -259,7 +259,8 @@ mod tests {
 
     #[test]
     fn test_auth_string_format() {
-        let creds = OneCredentials::for_testing("admin", "secret123", "https://localhost:2633/RPC2");
+        let creds =
+            OneCredentials::for_testing("admin", "secret123", "https://localhost:2633/RPC2");
         assert_eq!(creds.auth_string(), "admin:secret123");
     }
 

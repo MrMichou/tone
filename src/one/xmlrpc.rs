@@ -492,17 +492,14 @@ mod tests {
             xmlrpc_to_json(&XmlRpcValue::String("hello".into())),
             serde_json::json!("hello")
         );
-        assert_eq!(
-            xmlrpc_to_json(&XmlRpcValue::Int(42)),
-            serde_json::json!(42)
-        );
+        assert_eq!(xmlrpc_to_json(&XmlRpcValue::Int(42)), serde_json::json!(42));
         assert_eq!(
             xmlrpc_to_json(&XmlRpcValue::Boolean(true)),
             serde_json::json!(true)
         );
         assert_eq!(
-            xmlrpc_to_json(&XmlRpcValue::Double(3.14)),
-            serde_json::json!(3.14)
+            xmlrpc_to_json(&XmlRpcValue::Double(2.5)),
+            serde_json::json!(2.5)
         );
         assert_eq!(
             xmlrpc_to_json(&XmlRpcValue::Array(vec![
@@ -529,10 +526,7 @@ mod tests {
 
     #[test]
     fn test_build_method_call_with_boolean_and_double() {
-        let params = vec![
-            XmlRpcValue::Boolean(true),
-            XmlRpcValue::Double(1.5),
-        ];
+        let params = vec![XmlRpcValue::Boolean(true), XmlRpcValue::Double(1.5)];
         let xml = build_method_call("test.method", &params).unwrap();
         assert!(xml.contains("test.method"));
         assert!(xml.contains("<boolean>1</boolean>"));

@@ -279,7 +279,8 @@ mod tests {
 
     #[test]
     fn test_resource_filter_new() {
-        let filter = ResourceFilter::new("state", vec!["ACTIVE".to_string(), "RUNNING".to_string()]);
+        let filter =
+            ResourceFilter::new("state", vec!["ACTIVE".to_string(), "RUNNING".to_string()]);
         assert_eq!(filter.name, "state");
         assert_eq!(filter.values.len(), 2);
         assert_eq!(filter.values[0], "ACTIVE");
