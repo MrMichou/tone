@@ -280,10 +280,10 @@ fn parse_value_content(reader: &mut quick_xml::Reader<&[u8]>) -> Result<XmlRpcVa
                     }
                     "name" => in_name = true,
                     "string" | "int" | "i4" | "boolean" | "double" | "array" | "struct"
-                    | "data" | "member" => {
-                        if current_type.is_none() {
-                            current_type = Some(tag);
-                        }
+                    | "data" | "member"
+                        if current_type.is_none() =>
+                    {
+                        current_type = Some(tag);
                     }
                     _ => {}
                 }
