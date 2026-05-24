@@ -315,10 +315,8 @@ async fn handle_host_select_mode(app: &mut App, code: KeyCode) -> Result<bool> {
         KeyCode::Esc | KeyCode::Char('q') => {
             app.exit_mode();
         }
-        KeyCode::Char('j') | KeyCode::Down => {
-            if !app.host_list.is_empty() {
-                app.host_select_index = (app.host_select_index + 1).min(app.host_list.len() - 1);
-            }
+        KeyCode::Char('j') | KeyCode::Down if !app.host_list.is_empty() => {
+            app.host_select_index = (app.host_select_index + 1).min(app.host_list.len() - 1);
         }
         KeyCode::Char('k') | KeyCode::Up => {
             app.host_select_index = app.host_select_index.saturating_sub(1);
@@ -326,10 +324,8 @@ async fn handle_host_select_mode(app: &mut App, code: KeyCode) -> Result<bool> {
         KeyCode::Char('g') => {
             app.host_select_index = 0;
         }
-        KeyCode::Char('G') => {
-            if !app.host_list.is_empty() {
-                app.host_select_index = app.host_list.len() - 1;
-            }
+        KeyCode::Char('G') if !app.host_list.is_empty() => {
+            app.host_select_index = app.host_list.len() - 1;
         }
         KeyCode::Enter => {
             if let Some(host) = app.selected_host().cloned() {
