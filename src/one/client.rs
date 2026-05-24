@@ -429,6 +429,39 @@ impl OneClient {
     }
 }
 
+/// Format an OpenNebula API error for display
+/// This function sanitizes error messages to prevent information disclosure
+pub fn format_one_error(error: &anyhow::Error) -> String {
+    let error_str = error.to_string();
+
+    // Clean up common error patterns with safe messages
+    if error_str.contains("401") || error_str.contains("Authentication") {
+        return "Authentication failed. Check ONE_AUTH credentials.".to_string();
+    }
+    if error_str.contains("Connection refused") {
+        return "Connection refused. Check ONE_XMLRPC endpoint.".to_string();
+    }
+    if error_str.contains("timeout") || error_str.contains("timed out") {
+        return "Request timed out. Server may be unreachable.".to_string();
+    }
+    if error_str.contains("certificate") || error_str.contains("SSL") || error_str.contains("TLS") {
+        return "TLS/SSL error. Check certificate configuration.".to_string();
+    }
+
+    // For OpenNebula API errors, extract just the message
+    if let Some(start) = error_str.find("OpenNebula API error:") {
+        let msg = &error_str[start..];
+        // Truncate long error messages
+        if msg.len() > 100 {
+            return format!("{}...", &msg[..100]);
+        }
+        return msg.to_string();
+    }
+
+    // Generic fallback - don't expose internal details
+    "An error occurred. Check logs for details.".to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -642,37 +675,4 @@ mod tests {
             .expect("migrate should succeed");
         assert_eq!(migrate_result, serde_json::json!(100));
     }
-}
-
-/// Format an OpenNebula API error for display
-/// This function sanitizes error messages to prevent information disclosure
-pub fn format_one_error(error: &anyhow::Error) -> String {
-    let error_str = error.to_string();
-
-    // Clean up common error patterns with safe messages
-    if error_str.contains("401") || error_str.contains("Authentication") {
-        return "Authentication failed. Check ONE_AUTH credentials.".to_string();
-    }
-    if error_str.contains("Connection refused") {
-        return "Connection refused. Check ONE_XMLRPC endpoint.".to_string();
-    }
-    if error_str.contains("timeout") || error_str.contains("timed out") {
-        return "Request timed out. Server may be unreachable.".to_string();
-    }
-    if error_str.contains("certificate") || error_str.contains("SSL") || error_str.contains("TLS") {
-        return "TLS/SSL error. Check certificate configuration.".to_string();
-    }
-
-    // For OpenNebula API errors, extract just the message
-    if let Some(start) = error_str.find("OpenNebula API error:") {
-        let msg = &error_str[start..];
-        // Truncate long error messages
-        if msg.len() > 100 {
-            return format!("{}...", &msg[..100]);
-        }
-        return msg.to_string();
-    }
-
-    // Generic fallback - don't expose internal details
-    "An error occurred. Check logs for details.".to_string()
 }
