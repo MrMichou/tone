@@ -263,7 +263,7 @@ jobs:
               .github/packaging/scoop-manifest.json.template > tone.json
 
       - name: Create draft release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           draft: true
           body: |
