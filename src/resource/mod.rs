@@ -237,4 +237,106 @@ mod tests {
         assert_eq!(format_lcm_state(36), "BOOT_MIGRATE_FAILURE");
         assert_eq!(format_lcm_state(37), "PROLOG_MIGRATE_FAILURE");
     }
+
+    #[test]
+    fn test_format_vm_state_all() {
+        assert_eq!(format_vm_state(0), "INIT");
+        assert_eq!(format_vm_state(1), "PENDING");
+        assert_eq!(format_vm_state(2), "HOLD");
+        assert_eq!(format_vm_state(3), "ACTIVE");
+        assert_eq!(format_vm_state(4), "STOPPED");
+        assert_eq!(format_vm_state(5), "SUSPENDED");
+        assert_eq!(format_vm_state(6), "DONE");
+        assert_eq!(format_vm_state(8), "POWEROFF");
+        assert_eq!(format_vm_state(9), "UNDEPLOYED");
+        assert_eq!(format_vm_state(10), "CLONING");
+        assert_eq!(format_vm_state(11), "CLONING_FAILURE");
+        assert_eq!(format_vm_state(99), "UNKNOWN(99)");
+    }
+
+    #[test]
+    fn test_format_host_state_all() {
+        assert_eq!(format_host_state(0), "INIT");
+        assert_eq!(format_host_state(1), "MONITORING_MONITORED");
+        assert_eq!(format_host_state(2), "MONITORED");
+        assert_eq!(format_host_state(3), "ERROR");
+        assert_eq!(format_host_state(4), "DISABLED");
+        assert_eq!(format_host_state(5), "MONITORING_ERROR");
+        assert_eq!(format_host_state(6), "MONITORING_INIT");
+        assert_eq!(format_host_state(7), "MONITORING_DISABLED");
+        assert_eq!(format_host_state(8), "OFFLINE");
+        assert_eq!(format_host_state(42), "UNKNOWN(42)");
+    }
+
+    #[test]
+    fn test_format_image_state_all() {
+        assert_eq!(format_image_state(0), "INIT");
+        assert_eq!(format_image_state(1), "READY");
+        assert_eq!(format_image_state(2), "USED");
+        assert_eq!(format_image_state(3), "DISABLED");
+        assert_eq!(format_image_state(4), "LOCKED");
+        assert_eq!(format_image_state(5), "ERROR");
+        assert_eq!(format_image_state(6), "CLONE");
+        assert_eq!(format_image_state(7), "DELETE");
+        assert_eq!(format_image_state(8), "USED_PERS");
+        assert_eq!(format_image_state(9), "LOCKED_USED");
+        assert_eq!(format_image_state(10), "LOCKED_USED_PERS");
+        assert_eq!(format_image_state(77), "UNKNOWN(77)");
+    }
+
+    #[test]
+    fn test_format_datastore_state_all() {
+        assert_eq!(format_datastore_state(0), "READY");
+        assert_eq!(format_datastore_state(1), "DISABLED");
+        assert_eq!(format_datastore_state(5), "UNKNOWN(5)");
+    }
+
+    #[test]
+    fn test_extract_json_value_array_indexing() {
+        let item = json!({
+            "DISK": [
+                {"SIZE": "1024", "TYPE": "hd"},
+                {"SIZE": "2048", "TYPE": "cdrom"}
+            ]
+        });
+        assert_eq!(extract_json_value(&item, "DISK[0].SIZE"), "1024");
+        assert_eq!(extract_json_value(&item, "DISK[1].TYPE"), "cdrom");
+        assert_eq!(extract_json_value(&item, "DISK[5].SIZE"), "-");
+    }
+
+    #[test]
+    fn test_extract_json_value_types() {
+        let item = json!({
+            "NUM": 42,
+            "FLAG": true,
+            "EMPTY": null,
+            "OBJ": {"nested": "val"},
+            "ARR_SINGLE": ["only"],
+            "ARR_MULTI": ["a", "b", "c"],
+            "ARR_EMPTY": []
+        });
+        assert_eq!(extract_json_value(&item, "NUM"), "42");
+        assert_eq!(extract_json_value(&item, "FLAG"), "true");
+        assert_eq!(extract_json_value(&item, "EMPTY"), "-");
+        assert_eq!(extract_json_value(&item, "OBJ"), "[object]");
+        // Single-element array recurses with empty path; plain string yields "-"
+        assert_eq!(extract_json_value(&item, "ARR_SINGLE"), "-");
+        assert_eq!(extract_json_value(&item, "ARR_MULTI"), "[3 items]");
+        assert_eq!(extract_json_value(&item, "ARR_EMPTY"), "-");
+        assert_eq!(extract_json_value(&item, "NONEXISTENT"), "-");
+    }
+
+    #[test]
+    fn test_format_lcm_state_all_ranges() {
+        // Test a sampling of all defined states
+        assert_eq!(format_lcm_state(0), "LCM_INIT");
+        assert_eq!(format_lcm_state(3), "RUNNING");
+        assert_eq!(format_lcm_state(12), "SHUTDOWN");
+        assert_eq!(format_lcm_state(15), "UNKNOWN");
+        assert_eq!(format_lcm_state(22), "CLEANUP_DELETE");
+        assert_eq!(format_lcm_state(56), "DISK_SNAPSHOT");
+        assert_eq!(format_lcm_state(68), "BACKUP");
+        assert_eq!(format_lcm_state(69), "BACKUP_POWEROFF");
+        assert_eq!(format_lcm_state(999), "LCM_UNKNOWN(999)");
+    }
 }
