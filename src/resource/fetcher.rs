@@ -60,7 +60,17 @@ pub async fn fetch_resources_paginated(
 }
 
 /// Extract items from response using a path like "VM_POOL.VM" or "HOST_POOL.HOST"
+#[cfg(test)]
+pub(crate) fn extract_items(response: &Value, path: &str) -> Result<Vec<Value>> {
+    extract_items_impl(response, path)
+}
+
+#[cfg(not(test))]
 fn extract_items(response: &Value, path: &str) -> Result<Vec<Value>> {
+    extract_items_impl(response, path)
+}
+
+fn extract_items_impl(response: &Value, path: &str) -> Result<Vec<Value>> {
     let parts: Vec<&str> = path.split('.').collect();
     let mut current = response;
 
@@ -78,5 +88,57 @@ fn extract_items(response: &Value, path: &str) -> Result<Vec<Value>> {
         }
         Value::Null => Ok(Vec::new()),
         _ => Ok(Vec::new()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_extract_items_array() {
+        let response = json!({
+            "VM_POOL": {
+                "VM": [
+                    {"ID": "1", "NAME": "vm1"},
+                    {"ID": "2", "NAME": "vm2"}
+                ]
+            }
+        });
+        let items = extract_items(&response, "VM_POOL.VM").unwrap();
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[0]["ID"], "1");
+    }
+
+    #[test]
+    fn test_extract_items_single_object() {
+        let response = json!({
+            "HOST_POOL": {
+                "HOST": {"ID": "1", "NAME": "node-1"}
+            }
+        });
+        let items = extract_items(&response, "HOST_POOL.HOST").unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0]["NAME"], "node-1");
+    }
+
+    #[test]
+    fn test_extract_items_null() {
+        let response = json!({
+            "VM_POOL": {
+                "VM": null
+            }
+        });
+        let items = extract_items(&response, "VM_POOL.VM").unwrap();
+        assert!(items.is_empty());
+    }
+
+    #[test]
+    fn test_extract_items_missing_path() {
+        let response = json!({"VM_POOL": {}});
+        let result = extract_items(&response, "VM_POOL.VM");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("not found"));
     }
 }
