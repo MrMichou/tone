@@ -22,7 +22,7 @@ urlencoding = "2.1"
 
 # XML-RPC for OpenNebula API
 quick-xml = { version = "0.41", features = ["serialize"] }
-base64 = "0.22"
+base64 = "0.23"
 
 # Async runtime
 tokio = { version = "1.52", features = ["full"] }
