@@ -42,7 +42,7 @@ tracing-appender = "0.2"
 # Utils
 anyhow = "1.0"
 thiserror = "2.0"
-dirs = "6.0"
+dirs = "7.0"
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 
 # Security
@@ -60,5 +60,5 @@ assets = [
 ]
 
 [dev-dependencies]
-dirs = "6.0"
+dirs = "7.0"
 wiremock = "0.6"
