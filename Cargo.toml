@@ -16,16 +16,16 @@ ratatui = "0.30"
 crossterm = "0.29"
 
 # HTTP client (using rustls to avoid OpenSSL cross-compilation issues)
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
 url = "2.5"
 urlencoding = "2.1"
 
 # XML-RPC for OpenNebula API
-quick-xml = { version = "0.41", features = ["serialize"] }
-base64 = "0.22"
+quick-xml = { version = "0.42", features = ["serialize"] }
+base64 = "0.23"
 
 # Async runtime
-tokio = { version = "1.52", features = ["full"] }
+tokio = { version = "1.53", features = ["full"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -42,7 +42,7 @@ tracing-appender = "0.2"
 # Utils
 anyhow = "1.0"
 thiserror = "2.0"
-dirs = "6.0"
+dirs = "7.0"
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 
 # Security
@@ -60,5 +60,5 @@ assets = [
 ]
 
 [dev-dependencies]
-dirs = "6.0"
+dirs = "7.0"
 wiremock = "0.6"
