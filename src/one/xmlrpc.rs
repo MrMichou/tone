@@ -226,9 +226,9 @@ pub fn parse_response(xml: &str) -> Result<XmlRpcResponse> {
     loop {
         match reader.read_event_into(&mut buf) {
             Ok(Event::Start(ref e)) => match e.name().as_ref() {
-                b"fault" => in_fault = true,
-                b"params" => in_params = true,
-                b"value" if in_fault || in_params => {
+                "fault" => in_fault = true,
+                "params" => in_params = true,
+                "value" if in_fault || in_params => {
                     let value = parse_value_content(&mut reader)?;
                     if in_fault {
                         return Ok(XmlRpcResponse::Fault(value));
@@ -261,7 +261,7 @@ fn parse_value_content(reader: &mut quick_xml::Reader<&[u8]>) -> Result<XmlRpcVa
     loop {
         match reader.read_event_into(&mut buf) {
             Ok(Event::Start(ref e)) => {
-                let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
+                let tag = e.name().as_ref().to_string();
                 match tag.as_str() {
                     "value" => {
                         depth += 1;
@@ -289,7 +289,7 @@ fn parse_value_content(reader: &mut quick_xml::Reader<&[u8]>) -> Result<XmlRpcVa
                 }
             }
             Ok(Event::End(ref e)) => {
-                let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
+                let tag = e.name().as_ref().to_string();
                 match tag.as_str() {
                     "value" => {
                         depth -= 1;
@@ -321,7 +321,7 @@ fn parse_value_content(reader: &mut quick_xml::Reader<&[u8]>) -> Result<XmlRpcVa
                 }
             }
             Ok(Event::Text(e)) => {
-                let text = e.decode().unwrap_or_default().to_string();
+                let text = e.xml10_content().to_string();
                 if in_name {
                     member_name = text;
                 } else {
@@ -329,7 +329,7 @@ fn parse_value_content(reader: &mut quick_xml::Reader<&[u8]>) -> Result<XmlRpcVa
                 }
             }
             Ok(Event::GeneralRef(e)) => {
-                let name = e.decode().unwrap_or_default();
+                let name = e.xml10_content();
                 let resolved = resolve_entity(&name);
                 if in_name {
                     member_name.push_str(resolved);
@@ -403,7 +403,7 @@ fn parse_xml_element(reader: &mut quick_xml::Reader<&[u8]>, depth: usize) -> Res
     loop {
         match reader.read_event_into(&mut buf) {
             Ok(Event::Start(ref e)) => {
-                let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
+                let tag = e.name().as_ref().to_string();
 
                 // Parse nested element recursively
                 let nested = parse_xml_element(reader, depth + 1)?;
@@ -429,13 +429,13 @@ fn parse_xml_element(reader: &mut quick_xml::Reader<&[u8]>, depth: usize) -> Res
                 return Ok(Value::Object(result));
             }
             Ok(Event::Text(e)) => {
-                text_content.push_str(&e.decode().unwrap_or_default());
+                text_content.push_str(&e.xml10_content());
             }
             Ok(Event::GeneralRef(e)) => {
-                text_content.push_str(resolve_entity(&e.decode().unwrap_or_default()));
+                text_content.push_str(resolve_entity(&e.xml10_content()));
             }
             Ok(Event::Empty(ref e)) => {
-                let tag = String::from_utf8_lossy(e.name().as_ref()).to_string();
+                let tag = e.name().as_ref().to_string();
                 result.insert(tag, Value::Null);
             }
             Ok(Event::Eof) => {
