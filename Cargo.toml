@@ -1,6 +1,6 @@
 [package]
 name = "tone"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 description = "Terminal UI for OpenNebula - navigate, observe, and manage OpenNebula resources"
 license = "MIT"
